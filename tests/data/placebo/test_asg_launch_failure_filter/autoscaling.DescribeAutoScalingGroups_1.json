@@ -1,0 +1,114 @@
+{
+    "status_code": 200, 
+    "data": {
+        "AutoScalingGroups": [
+            {
+                "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:644160558196:autoScalingGroup:2da997e8-891c-4545-b482-de5b40636961:autoScalingGroupName/c7n-asg-launch-failure", 
+                "TargetGroupARNs": [], 
+                "SuspendedProcesses": [], 
+                "DesiredCapacity": 1, 
+                "Tags": [
+                    {
+                        "ResourceType": "auto-scaling-group", 
+                        "ResourceId": "c7n-asg-launch-failure", 
+                        "PropagateAtLaunch": true, 
+                        "Value": "c7n-asg-launch-failure", 
+                        "Key": "Name"
+                    }
+                ], 
+                "EnabledMetrics": [], 
+                "LoadBalancerNames": [], 
+                "AutoScalingGroupName": "c7n-asg-launch-failure", 
+                "DefaultCooldown": 300, 
+                "MinSize": 1, 
+                "Instances": [], 
+                "MaxSize": 1, 
+                "VPCZoneIdentifier": "subnet-3a334610", 
+                "HealthCheckGracePeriod": 300, 
+                "TerminationPolicies": [
+                    "Default"
+                ], 
+                "LaunchConfigurationName": "c7n-launchconfig-test-fail-01", 
+                "CreatedTime": {
+                    "hour": 14, 
+                    "__class__": "datetime", 
+                    "month": 11, 
+                    "second": 26, 
+                    "microsecond": 208000, 
+                    "year": 2016, 
+                    "day": 18, 
+                    "minute": 59
+                }, 
+                "AvailabilityZones": [
+                    "us-east-1d"
+                ], 
+                "HealthCheckType": "EC2", 
+                "NewInstancesProtectedFromScaleIn": false
+            }, 
+            {
+                "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:644160558196:autoScalingGroup:9f686323-3558-4c1b-9c19-d336c8755709:autoScalingGroupName/c7n-asg-launch-success", 
+                "TargetGroupARNs": [], 
+                "SuspendedProcesses": [], 
+                "DesiredCapacity": 1, 
+                "Tags": [
+                    {
+                        "ResourceType": "auto-scaling-group", 
+                        "ResourceId": "c7n-asg-launch-success", 
+                        "PropagateAtLaunch": true, 
+                        "Value": "c7n-asg-launch-success", 
+                        "Key": "Name"
+                    }
+                ], 
+                "EnabledMetrics": [], 
+                "LoadBalancerNames": [], 
+                "AutoScalingGroupName": "c7n-asg-launch-success", 
+                "DefaultCooldown": 300, 
+                "MinSize": 1, 
+                "Instances": [
+                    {
+                        "ProtectedFromScaleIn": false, 
+                        "AvailabilityZone": "us-east-1b", 
+                        "InstanceId": "i-0042f0aca6664a6d6", 
+                        "HealthStatus": "Healthy", 
+                        "LifecycleState": "InService", 
+                        "LaunchConfigurationName": "c7n-launchconfig-01"
+                    }
+                ], 
+                "MaxSize": 1, 
+                "VPCZoneIdentifier": "subnet-efbcccb7", 
+                "HealthCheckGracePeriod": 300, 
+                "TerminationPolicies": [
+                    "Default"
+                ], 
+                "LaunchConfigurationName": "c7n-launchconfig-01", 
+                "CreatedTime": {
+                    "hour": 15, 
+                    "__class__": "datetime", 
+                    "month": 11, 
+                    "second": 47, 
+                    "microsecond": 709000, 
+                    "year": 2016, 
+                    "day": 18, 
+                    "minute": 3
+                }, 
+                "AvailabilityZones": [
+                    "us-east-1b"
+                ], 
+                "HealthCheckType": "EC2", 
+                "NewInstancesProtectedFromScaleIn": false
+            }
+        ], 
+        "ResponseMetadata": {
+            "RetryAttempts": 0, 
+            "HTTPStatusCode": 200, 
+            "RequestId": "80f1d7dd-ada9-11e6-bbbd-77f0a10d9e63", 
+            "HTTPHeaders": {
+                "x-amzn-requestid": "80f1d7dd-ada9-11e6-bbbd-77f0a10d9e63", 
+                "vary": "Accept-Encoding", 
+                "content-length": "3775", 
+                "content-type": "text/xml", 
+                "date": "Fri, 18 Nov 2016 16:10:19 GMT"
+            }
+        }
+    }
+}

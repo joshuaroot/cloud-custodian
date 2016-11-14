@@ -492,6 +492,55 @@ class VpcIdFilter(ValueFilter):
         return super(VpcIdFilter, self).process(asgs)
 
 
+@filters.register('launch-failure')
+class LaunchFailureFilter(Filter):
+    """
+    This filter is designed to report ASGs that are constantly trying to
+    spin up new instances & failing to do so over & over.
+    The filter can be used to search for failure events over a period of time
+    by using the 'days' parameter.
+
+    - name: asg-launch-failure
+      resource: asg
+      filters:
+        - launch-failure
+          days: 10
+    """
+    schema = type_schema(
+        'launch-failure',
+        days={'type': 'number'})
+
+    def asg_failed_launch(self, asg):
+        limit_date = datetime.now(
+            tz=tzutc()) - timedelta(days=self.data.get('days', 1))
+        client = local_session(
+            self.manager.session_factory).client('autoscaling')
+        p = client.get_paginator('describe_scaling_activities')
+        results = [r['Activities'] for r in p.paginate(
+            AutoScalingGroupName=asg['AutoScalingGroupName'])][0]
+
+        activities = {}
+        for r in results:
+            if r['StartTime'].date() < limit_date.date():
+                break
+            if r['StatusCode'] != 'Failed':
+                continue
+            if 'Launching a new EC2 instance' not in r['Description']:
+                continue
+            activities.setdefault(r['AutoScalingGroupName'], []).append({
+                'Description': r['Description'],
+                'StartTime': r['StartTime'],
+                'StatusCode': r['StatusCode'],
+                'ActivityId': r['ActivityId'],
+                'StatusMessage': r['StatusMessage']})
+        return activities
+
+    def process(self, asgs, event=None):
+        with self.executor_factory(max_workers=3) as w:
+            results = list(w.map(self.asg_failed_launch, asgs))
+        return [r for r in results if len(r) > 0]
+
+
 @actions.register('tag-trim')
 class GroupTagTrim(TagTrim):
 

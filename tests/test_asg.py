@@ -329,3 +329,15 @@ class AutoScalingTest(BaseTest):
         resources = p.run()
         self.assertEqual(len(resources), 1)
         self.assertEqual(resources[0]['AutoScalingGroupName'], 'ContainersFTW')
+
+    def test_asg_failed_filter(self):
+        session = self.replay_flight_data('test_asg_launch_failure_filter')
+        p = self.load_policy({
+            'name': 'failed-asg-build',
+            'resource': 'asg',
+            'filters': [{
+                'type': 'launch-failure',
+                'days': 1}]}, session_factory=session)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertTrue(resources[0].has_key('c7n-asg-launch-failure'))
