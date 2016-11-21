@@ -510,35 +510,34 @@ class LaunchFailureFilter(Filter):
         'launch-failure',
         days={'type': 'number'})
 
-    def asg_failed_launch(self, asg):
+    def asg_activities(self, asg):
         limit_date = datetime.now(
             tz=tzutc()) - timedelta(days=self.data.get('days', 1))
         client = local_session(
             self.manager.session_factory).client('autoscaling')
         p = client.get_paginator('describe_scaling_activities')
-        results = [r['Activities'] for r in p.paginate(
-            AutoScalingGroupName=asg['AutoScalingGroupName'])][0]
-
-        activities = {}
-        for r in results:
-            if r['StartTime'].date() < limit_date.date():
-                break
-            if r['StatusCode'] != 'Failed':
-                continue
-            if 'Launching a new EC2 instance' not in r['Description']:
-                continue
-            activities.setdefault(r['AutoScalingGroupName'], []).append({
-                'Description': r['Description'],
-                'StartTime': r['StartTime'],
-                'StatusCode': r['StatusCode'],
-                'ActivityId': r['ActivityId'],
-                'StatusMessage': r['StatusMessage']})
-        return activities
+        results = {}
+        for activity in p.paginate(
+                AutoScalingGroupName=asg['AutoScalingGroupName']):
+            for a in activity['Activities']:
+                if a['StartTime'].date() < limit_date.date():
+                    break
+                if 'Launching a new EC2 instance' not in a[
+                    'Description'] and a[
+                    'StatusCode'] != 'Failed':
+                    continue
+                results.setdefault(a['AutoScalingGroupName'], []).append(
+                    a['ActivityId'])
+        return {k:v for k, v in results.items()}
 
     def process(self, asgs, event=None):
         with self.executor_factory(max_workers=3) as w:
-            results = list(w.map(self.asg_failed_launch, asgs))
-        return [r for r in results if len(r) > 0]
+            failures = w.map(self.asg_activities, asgs)
+        keys = []
+        for f in failures:
+            for k in f.keys():
+                keys.append(k)
+        return [a for a in asgs if a['AutoScalingGroupName'] in keys]
 
 
 @actions.register('tag-trim')
