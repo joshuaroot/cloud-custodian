@@ -511,8 +511,6 @@ class LaunchFailureFilter(Filter):
         days={'type': 'number'})
 
     def asg_activities(self, asg):
-        limit_date = datetime.now(
-            tz=tzutc()) - timedelta(days=self.data.get('days', 1))
         client = local_session(
             self.manager.session_factory).client('autoscaling')
         p = client.get_paginator('describe_scaling_activities')
@@ -520,11 +518,12 @@ class LaunchFailureFilter(Filter):
         for activity in p.paginate(
                 AutoScalingGroupName=asg['AutoScalingGroupName']):
             for a in activity['Activities']:
-                if a['StartTime'].date() < limit_date.date():
+                if a['StartTime'].replace(tzinfo=tzutc()) < datetime.now(
+                        tz=tzutc()) - timedelta(days=self.data.get('days', 1)):
                     break
-                if 'Launching a new EC2 instance' not in a[
-                    'Description'] and a[
-                    'StatusCode'] != 'Failed':
+                if 'Launching a new EC2 instance' not in a['Description']:
+                    continue
+                if a['StatusCode'] != 'Failed':
                     continue
                 results.setdefault(a['AutoScalingGroupName'], []).append(
                     a['ActivityId'])

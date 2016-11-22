@@ -337,7 +337,7 @@ class AutoScalingTest(BaseTest):
             'resource': 'asg',
             'filters': [{
                 'type': 'launch-failure',
-                'days': 2}]}, session_factory=session)
+                'days': 30}]}, session_factory=session)
         resources = p.run()
         self.assertEqual(len(resources), 1)
         self.assertEqual(
