@@ -649,20 +649,6 @@ class UserMfaDevice(ValueFilter):
 
 @User.action_registry.register('remove-keys')
 class UserRemoveAccessKey(BaseAction):
-    """Removes/disables user access keys
-
-    :example:
-
-        .. code-block: yaml
-
-            policies:
-              - name: iam-user-disable-expired-keys
-                resource: iam-user
-                actions:
-                  - type: remove-keys
-                    age: 31
-                    disable: true
-    """
 
     schema = type_schema(
         'remove-keys', age={'type': 'number'}, disable={'type': 'boolean'})
