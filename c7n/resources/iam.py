@@ -186,6 +186,8 @@ class IamRoleInlinePolicy(Filter):
     """
         Filter IAM roles that have an inline-policy attached
 
+        Inline policies are policies that are embedded to a single role
+
         True: Filter roles that have an inline-policy
         False: Filter roles that do not have an inline-policy
 
@@ -517,44 +519,41 @@ class UserCredentialReport(Filter):
 
 @User.filter_registry.register('policy')
 class UserAttachedPolicy(Filter):
-    """Filters users based on policy attached
+    """Filters users that have policies attached
 
     :example:
 
         .. code-block: yaml
 
             policies:
-              - name: iam-user-admin-policy
+              - name: iam-user-attached-policies
                 resource: iam-user
                 filters:
                   - type: policy
-                    key: PolicyName
-                    value: AdministratorAccess
+                    attached: true
     """
 
-    schema = type_schema('policy')
+    schema = type_schema(
+        'policy',
+        attached={'type': 'boolean'})
 
     def process(self, resources, event=None):
 
         def _user_policies(resource):
             client = local_session(self.manager.session_factory).client('iam')
-            resource['AttachedPolicies'] = client.list_attached_user_policies(
+            resource['c7n.UserPolicies'] = client.list_attached_user_policies(
                 UserName=resource['UserName'])['AttachedPolicies']
 
         with self.executor_factory(max_workers=2) as w:
-            query_resources = [
-                r for r in resources if 'AttachedPolicies' not in r]
             self.log.debug(
-                "Querying %d users policies" % len(query_resources))
-            list(w.map(_user_policies, query_resources))
+                "Querying %d users policies" % len(resources))
+            list(w.map(_user_policies, resources))
 
-        matched = []
-        for r in resources:
-            for p in r['AttachedPolicies']:
-                if self.match(p):
-                    matched.append(r)
-                    break
-        return matched
+        results = []
+        if self.data.get('attached', True):
+            return [r for r in resources if r['c7n.UserPolicies']]
+
+        return [r for r in resources if not r['c7n.UserPolicies']]
 
 
 @User.filter_registry.register('access-key')
@@ -571,7 +570,7 @@ class UserAccessKey(ValueFilter):
                 filters:
                   - type: access-key
                     key: CreateDate
-                    value: 60
+                    value: 10
                     op: ge
                     value_type: age
     """
@@ -582,7 +581,7 @@ class UserAccessKey(ValueFilter):
 
         def _user_keys(resource):
             client = local_session(self.manager.session_factory).client('iam')
-            resource['AccessKeys'] = client.list_access_keys(
+            resource['c7n.AccessKeys'] = client.list_access_keys(
                 UserName=resource['UserName'])['AccessKeyMetadata']
 
         with self.executor_factory(max_workers=2) as w:
@@ -594,7 +593,7 @@ class UserAccessKey(ValueFilter):
 
         matched = []
         for r in resources:
-            for p in r['AccessKeys']:
+            for p in r['c7n.AccessKeys']:
                 if self.match(p):
                     matched.append(r)
                     break

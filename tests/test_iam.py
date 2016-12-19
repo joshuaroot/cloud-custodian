@@ -27,8 +27,8 @@ from c7n.mu import LambdaManager, LambdaFunction, PythonPackageArchive
 from c7n.resources.sns import SNS
 from c7n.resources.iam import (UserMfaDevice,
                                UsedIamPolicies, UnusedIamPolicies,
-                               UsedInstanceProfiles,
-                               UnusedInstanceProfiles,
+                               UsedInstanceProfiles, UserAttachedPolicy,
+                               UnusedInstanceProfiles, UserAccessKey,
                                UsedIamRole, UnusedIamRole,
                                IamGroupUsers,
                                UserCredentialReport,
@@ -233,6 +233,21 @@ class IamPolicyFilterUsage(BaseTest):
         resources = p.run()
         self.assertEqual(len(resources), 203)
 
+    def test_iam_user_attached_policy(self):
+        session_factory = self.replay_flight_data(
+            'test_iam_user_attached_policy')
+        self.patch(
+            UserAttachedPolicy, 'executor_factory', MainThreadExecutor)
+        p = self.load_policy({
+            'name': 'iam-user-attached-profiles',
+            'resource': 'iam-user',
+            'filters': [{
+                'type': 'policy',
+                'attached': True}]}, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 2)
+        self.assertTrue(resources[0]['UserName'], 'alphabet_soup')
+
 
 class IamGroupFilterUsage(BaseTest):
 
@@ -337,6 +352,28 @@ class IamInlinePolicyUsage(BaseTest):
                 'value': False}]}, session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 2)
+
+
+class IamUserFilters(BaseTest):
+
+    def test_iam_user_access_keys(self):
+        session_factory = self.replay_flight_data(
+            'test_iam_user_access_key')
+        self.patch(
+            UserAccessKey, 'executor_factory', MainThreadExecutor)
+        p = self.load_policy({
+            'name': 'iam-user_access_key_created',
+            'resource': 'iam-user',
+            'filters': [{
+                'type': 'access-key',
+                'key': 'CreateDate',
+                'value': 10,
+                'op': 'ge',
+                'value_type': 'age'}]}, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertTrue(resources[0]['UserName'], 'alphabet_soup')
+
 
 
 class KMSCrossAccount(BaseTest):
