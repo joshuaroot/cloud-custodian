@@ -586,7 +586,7 @@ class UserAccessKey(ValueFilter):
 
         with self.executor_factory(max_workers=2) as w:
             query_resources = [
-                r for r in resources if 'AccessKeys' not in r]
+                r for r in resources if 'c7n.AccessKeys' not in r]
             self.log.debug(
                 "Querying %d users' api keys" % len(query_resources))
             list(w.map(_user_keys, query_resources))

@@ -354,28 +354,6 @@ class IamInlinePolicyUsage(BaseTest):
         self.assertEqual(len(resources), 2)
 
 
-class IamUserFilters(BaseTest):
-
-    def test_iam_user_access_keys(self):
-        session_factory = self.replay_flight_data(
-            'test_iam_user_access_key')
-        self.patch(
-            UserAccessKey, 'executor_factory', MainThreadExecutor)
-        p = self.load_policy({
-            'name': 'iam-user_access_key_created',
-            'resource': 'iam-user',
-            'filters': [{
-                'type': 'access-key',
-                'key': 'CreateDate',
-                'value': 10,
-                'op': 'ge',
-                'value_type': 'age'}]}, session_factory=session_factory)
-        resources = p.run()
-        self.assertEqual(len(resources), 1)
-        self.assertTrue(resources[0]['UserName'], 'alphabet_soup')
-
-
-
 class KMSCrossAccount(BaseTest):
 
     def test_kms_cross_account(self):
