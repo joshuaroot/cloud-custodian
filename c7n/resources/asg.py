@@ -31,6 +31,7 @@ from c7n.filters import (
 from c7n.filters.offhours import OffHour, OnHour
 import c7n.filters.vpc as net_filters
 
+from c7n import utils
 from c7n.manager import resources
 from c7n.query import QueryResourceManager
 from c7n.tags import TagActionFilter, DEFAULT_TAG, TagCountFilter, TagTrim
@@ -492,51 +493,51 @@ class VpcIdFilter(ValueFilter):
         return super(VpcIdFilter, self).process(asgs)
 
 
-@filters.register('launch-failure')
-class LaunchFailureFilter(Filter):
-    """
-    This filter is designed to report ASGs that are constantly trying to
-    spin up new instances & failing to do so over & over.
-    The filter can be used to search for failure events over a period of time
-    by using the 'days' parameter.
+@filters.register('launch-activity')
+class LaunchActivityFilter(Filter):
+    """Filter ASG based on launch activity status
 
-    - name: asg-launch-failure
-      resource: asg
-      filters:
-        - launch-failure
-          days: 10
+    :example:
+
+        .. code-block: yaml
+
+            policies:
+              - name: asg-launch-failures-weekly
+                resource: asg
+                filters:
+                  - launch-activity
+                    status: Failed
+                    days: 7
     """
     schema = type_schema(
         'launch-failure',
+        status={'type': 'string'},
         days={'type': 'number'})
 
+    @worker
     def asg_activities(self, asg):
+        if 'c7n.Activities' in asg:
+            return
+        asg['c7n.Activities'] = []
         client = local_session(
             self.manager.session_factory).client('autoscaling')
         p = client.get_paginator('describe_scaling_activities')
-        results = {}
         for activity in p.paginate(
                 AutoScalingGroupName=asg['AutoScalingGroupName']):
             for a in activity['Activities']:
-                if a['StartTime'].replace(tzinfo=tzutc()) < datetime.now(
-                        tz=tzutc()) - timedelta(days=self.data.get('days', 1)):
-                    break
-                if 'Launching a new EC2 instance' not in a['Description']:
-                    continue
-                if a['StatusCode'] != 'Failed':
-                    continue
-                results.setdefault(a['AutoScalingGroupName'], []).append(
-                    a['ActivityId'])
-        return {k:v for k, v in results.items()}
+                if self.data.get('days'):
+                    if a['StartTime'].replace(tzinfo=tzutc()) < datetime.now(
+                            tz=tzutc()) - timedelta(days=self.data.get('days')):
+                        break
+                if a['StatusCode'] == self.data.get('status', 'Failed'):
+                    asg['c7n.Activities'].append(a)
 
     def process(self, asgs, event=None):
-        with self.executor_factory(max_workers=3) as w:
-            failures = w.map(self.asg_activities, asgs)
-        keys = []
-        for f in failures:
-            for k in f.keys():
-                keys.append(k)
-        return [a for a in asgs if a['AutoScalingGroupName'] in keys]
+        with self.executor_factory(max_workers=2) as w:
+            for asg_set in utils.chunks(asgs, 10):
+                list(w.map(self.asg_activities, asg_set))
+        return [a for a in asgs if len(a['c7n.Activities']) > 0]
+
 
 
 @actions.register('tag-trim')

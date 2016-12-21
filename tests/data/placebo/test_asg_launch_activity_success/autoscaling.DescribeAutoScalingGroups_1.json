@@ -1,0 +1,181 @@
+{
+    "status_code": 200, 
+    "data": {
+        "AutoScalingGroups": [
+            {
+                "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:185106417252:autoScalingGroup:749cd48a-cd55-4d2c-a7b1-67d086c7787b:autoScalingGroupName/c7n-asg-launch-failure", 
+                "TargetGroupARNs": [], 
+                "SuspendedProcesses": [], 
+                "DesiredCapacity": 1, 
+                "Tags": [
+                    {
+                        "ResourceType": "auto-scaling-group", 
+                        "ResourceId": "c7n-asg-launch-failure", 
+                        "PropagateAtLaunch": true, 
+                        "Value": "c7n-asg-ec2-failure", 
+                        "Key": "Name"
+                    }
+                ], 
+                "EnabledMetrics": [], 
+                "LoadBalancerNames": [], 
+                "AutoScalingGroupName": "c7n-asg-launch-failure", 
+                "DefaultCooldown": 300, 
+                "MinSize": 1, 
+                "Instances": [], 
+                "MaxSize": 1, 
+                "VPCZoneIdentifier": "subnet-0ffe2c33", 
+                "HealthCheckGracePeriod": 300, 
+                "TerminationPolicies": [
+                    "Default"
+                ], 
+                "LaunchConfigurationName": "c7n-launch-config-failure", 
+                "CreatedTime": {
+                    "hour": 20, 
+                    "__class__": "datetime", 
+                    "month": 12, 
+                    "second": 16, 
+                    "microsecond": 853000, 
+                    "year": 2016, 
+                    "day": 20, 
+                    "minute": 55
+                }, 
+                "AvailabilityZones": [
+                    "us-east-1e"
+                ], 
+                "HealthCheckType": "EC2", 
+                "NewInstancesProtectedFromScaleIn": false
+            }, 
+            {
+                "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:185106417252:autoScalingGroup:dac7b369-bf6f-4b89-bac8-cd0079e7c25d:autoScalingGroupName/c7n-asg-launch-success", 
+                "TargetGroupARNs": [], 
+                "SuspendedProcesses": [], 
+                "DesiredCapacity": 1, 
+                "Tags": [
+                    {
+                        "ResourceType": "auto-scaling-group", 
+                        "ResourceId": "c7n-asg-launch-success", 
+                        "PropagateAtLaunch": false, 
+                        "Value": "c7n-launch-success", 
+                        "Key": "Name"
+                    }, 
+                    {
+                        "ResourceType": "auto-scaling-group", 
+                        "ResourceId": "c7n-asg-launch-success", 
+                        "PropagateAtLaunch": true, 
+                        "Value": "TestValue", 
+                        "Key": "TestTag"
+                    }
+                ], 
+                "EnabledMetrics": [], 
+                "LoadBalancerNames": [], 
+                "AutoScalingGroupName": "c7n-asg-launch-success", 
+                "DefaultCooldown": 300, 
+                "MinSize": 1, 
+                "Instances": [
+                    {
+                        "ProtectedFromScaleIn": false, 
+                        "AvailabilityZone": "us-east-1b", 
+                        "InstanceId": "i-08790aa60cf975eb5", 
+                        "HealthStatus": "Healthy", 
+                        "LifecycleState": "InService", 
+                        "LaunchConfigurationName": "c7n-launch-config-failure"
+                    }
+                ], 
+                "MaxSize": 3, 
+                "VPCZoneIdentifier": "subnet-ea6429a3,subnet-2c5dcf01", 
+                "HealthCheckGracePeriod": 300, 
+                "TerminationPolicies": [
+                    "Default"
+                ], 
+                "LaunchConfigurationName": "c7n-launch-config-failure", 
+                "CreatedTime": {
+                    "hour": 16, 
+                    "__class__": "datetime", 
+                    "month": 12, 
+                    "second": 55, 
+                    "microsecond": 686000, 
+                    "year": 2016, 
+                    "day": 15, 
+                    "minute": 1
+                }, 
+                "AvailabilityZones": [
+                    "us-east-1a", 
+                    "us-east-1b"
+                ], 
+                "HealthCheckType": "EC2", 
+                "NewInstancesProtectedFromScaleIn": false
+            }, 
+            {
+                "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:185106417252:autoScalingGroup:15db3545-6740-45cb-b610-11cf5df035a2:autoScalingGroupName/c7n-tag-no-match", 
+                "TargetGroupARNs": [], 
+                "SuspendedProcesses": [], 
+                "DesiredCapacity": 1, 
+                "Tags": [
+                    {
+                        "ResourceType": "auto-scaling-group", 
+                        "ResourceId": "c7n-tag-no-match", 
+                        "PropagateAtLaunch": true, 
+                        "Value": "TestValue", 
+                        "Key": "TestKey"
+                    }, 
+                    {
+                        "ResourceType": "auto-scaling-group", 
+                        "ResourceId": "c7n-tag-no-match", 
+                        "PropagateAtLaunch": false, 
+                        "Value": "TestValue", 
+                        "Key": "TestTag"
+                    }
+                ], 
+                "EnabledMetrics": [], 
+                "LoadBalancerNames": [], 
+                "AutoScalingGroupName": "c7n-tag-no-match", 
+                "DefaultCooldown": 300, 
+                "MinSize": 1, 
+                "Instances": [
+                    {
+                        "ProtectedFromScaleIn": false, 
+                        "AvailabilityZone": "us-east-1b", 
+                        "InstanceId": "i-038197e2c4c066b6b", 
+                        "HealthStatus": "Healthy", 
+                        "LifecycleState": "InService", 
+                        "LaunchConfigurationName": "c7n-launch-config-failure"
+                    }
+                ], 
+                "MaxSize": 1, 
+                "VPCZoneIdentifier": "subnet-ea6429a3", 
+                "HealthCheckGracePeriod": 300, 
+                "TerminationPolicies": [
+                    "Default"
+                ], 
+                "LaunchConfigurationName": "c7n-launch-config-failure", 
+                "CreatedTime": {
+                    "hour": 17, 
+                    "__class__": "datetime", 
+                    "month": 12, 
+                    "second": 10, 
+                    "microsecond": 110000, 
+                    "year": 2016, 
+                    "day": 20, 
+                    "minute": 42
+                }, 
+                "AvailabilityZones": [
+                    "us-east-1b"
+                ], 
+                "HealthCheckType": "EC2", 
+                "NewInstancesProtectedFromScaleIn": false
+            }
+        ], 
+        "ResponseMetadata": {
+            "RetryAttempts": 0, 
+            "HTTPStatusCode": 200, 
+            "RequestId": "006799a2-c6f7-11e6-9ef8-83e06b17d61e", 
+            "HTTPHeaders": {
+                "x-amzn-requestid": "006799a2-c6f7-11e6-9ef8-83e06b17d61e", 
+                "vary": "Accept-Encoding", 
+                "content-length": "6292", 
+                "content-type": "text/xml", 
+                "date": "Tue, 20 Dec 2016 20:58:04 GMT"
+            }
+        }
+    }
+}
