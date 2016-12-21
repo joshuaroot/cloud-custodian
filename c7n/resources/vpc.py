@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import zlib
+
 from c7n.actions import BaseAction, ModifyGroupsAction
 from c7n.filters import (
     DefaultVpcBase, Filter, FilterValidationError, ValueFilter)
 import c7n.filters.vpc as net_filters
+from c7n.filters.revisions import Diff
 from c7n.query import QueryResourceManager, ResourceQuery
 from c7n.manager import resources
-from c7n.utils import local_session, type_schema
+from c7n.utils import local_session, type_schema, get_retry, camelResource
 
 
 @resources.register('vpc')
@@ -64,6 +68,189 @@ class SecurityGroup(QueryResourceManager):
         config_type = "AWS::EC2::SecurityGroup"
         filter_name = "GroupIds"
         name = "GroupId"
+        id_prefix = "sg-"
+
+
+@SecurityGroup.filter_registry.register('diff')
+class SecurityGroupDiffFilter(Diff):
+
+    def diff(self, source, target):
+        differ = SecurityGroupDiff()
+        return differ.diff(source, target)
+
+    def transform_revision(self, revision):
+        # config does some odd transforms, walk them back
+        resource = camelResource(json.loads(revision['configuration']))
+        for rset in ('IpPermissions', 'IpPermissionsEgress'):
+            for p in resource.get(rset, ()):
+                if p.get('FromPort', '') is None:
+                    p.pop('FromPort')
+                if p.get('ToPort', '') is None:
+                    p.pop('ToPort')
+                if 'Ipv6Ranges' not in p:
+                    p[u'Ipv6Ranges'] = []
+                for attribute, element_key in (
+                        ('IpRanges', u'CidrIp'),):
+                    if attribute not in p:
+                        continue
+                    p[attribute] = [{element_key: v} for v in p[attribute]]
+        return resource
+
+
+class SecurityGroupDiff(object):
+    """Diff two versions of a security group
+
+    Immutable: GroupId, GroupName, Description, VpcId, OwnerId
+    Mutable: Tags, Rules
+    """
+
+    def diff(self, source, target):
+        delta = {}
+        tag_delta = self.get_tag_delta(source, target)
+        if tag_delta:
+            delta['tags'] = tag_delta
+        ingress_delta = self.get_rule_delta('IpPermissions', source, target)
+        if ingress_delta:
+            delta['ingress'] = ingress_delta
+        egress_delta = self.get_rule_delta(
+            'IpPermissionsEgress', source, target)
+        if egress_delta:
+            delta['egress'] = egress_delta
+        if delta:
+            return delta
+
+    def get_tag_delta(self, source, target):
+        source_tags = {t['Key']: t['Value'] for t in source['Tags']}
+        target_tags = {t['Key']: t['Value'] for t in target['Tags']}
+        target_keys = set(target_tags.keys())
+        source_keys = set(source_tags.keys())
+        removed = source_keys.difference(target_keys)
+        added = target_keys.difference(source_keys)
+        changed = set()
+        for k in target_keys.intersection(source_keys):
+            if source_tags[k] != target_tags[k]:
+                changed.add(k)
+        return {k: v for k, v in {
+            'added': {k: target_tags[k] for k in added},
+            'removed': {k: source_tags[k] for k in removed},
+            'updated': {k: target_tags[k] for k in changed}}.items() if v}
+
+    def get_rule_delta(self, key, source, target):
+        source_rules = {
+            self.compute_rule_hash(r): r for r in source.get(key, ())}
+        target_rules = {
+            self.compute_rule_hash(r): r for r in target.get(key, ())}
+        source_keys = set(source_rules.keys())
+        target_keys = set(target_rules.keys())
+        removed = source_keys.difference(target_keys)
+        added = target_keys.difference(source_keys)
+        return {k: v for k, v in
+                {'removed': [source_rules[rid] for rid in sorted(removed)],
+                 'added': [target_rules[rid] for rid in sorted(added)]}.items() if v}
+
+    RULE_ATTRS = (
+        ('PrefixListIds', 'PrefixListId'),
+        ('UserIdGroupPairs', 'GroupId'),
+        ('IpRanges', 'CidrIp'),
+        ('Ipv6Ranges', 'CidrIpv6')
+    )
+
+    def compute_rule_hash(self, rule):
+        buf = "%d-%d-%s-" % (
+            rule.get('FromPort', 0) or 0,
+            rule.get('ToPort', 0) or 0,
+            rule.get('IpProtocol', '-1') or '-1'
+            )
+        for a, ke in self.RULE_ATTRS:
+            if a not in rule:
+                continue
+            ev = [e[ke] for e in rule[a]]
+            ev.sort()
+            for e in ev:
+                buf += "%s-" % e
+        return abs(zlib.crc32(buf))
+
+
+@SecurityGroup.action_registry.register('patch')
+class SecurityGroupApplyPatch(BaseAction):
+    """Modify a resource via application of a reverse delta.
+    """
+    schema = type_schema('patch')
+
+    def validate(self):
+        diff_filters = [n for n in self.manager.filters if isinstance(
+            n, SecurityGroupDiffFilter)]
+        if not len(diff_filters):
+            raise FilterValidationError(
+                "resource patching requires diff filter")
+        return self
+
+    def process(self, resources):
+        client = local_session(self.manager.session_factory).client('ec2')
+        differ = SecurityGroupDiff()
+        patcher = SecurityGroupPatch()
+        for r in resources:
+            # reverse the patch by computing fresh, the forward
+            # patch is for notifications
+            d = differ.diff(r, r['c7n:previous-revision']['resource'])
+            patcher.apply_delta(client, r, d)
+
+
+class SecurityGroupPatch(object):
+
+    RULE_TYPE_MAP = {
+        'egress': ('IpPermissionsEgress',
+                   'revoke_security_group_egress',
+                   'authorize_security_group_egress'),
+        'ingress': ('IpPermissions',
+                    'revoke_security_group_ingress',
+                    'authorize_security_group_ingress')}
+
+    retry = staticmethod(get_retry((
+        'RequestLimitExceeded', 'Client.RequestLimitExceeded')))
+
+    def apply_delta(self, client, target, change_set):
+        if 'tags' in change_set:
+            self.process_tags(client, target, change_set['tags'])
+        if 'ingress' in change_set:
+            self.process_rules(
+                client, 'ingress', target, change_set['ingress'])
+        if 'egress' in change_set:
+            self.process_rules(
+                client, 'egress', target, change_set['egress'])
+
+    def process_tags(self, client, group, tag_delta):
+        if 'removed' in tag_delta:
+            self.retry(client.delete_tags,
+                       Resources=[group['GroupId']],
+                       Tags=[{'Key': k}
+                             for k in tag_delta['removed']])
+        tags = []
+        if 'added' in tag_delta:
+            tags.extend(
+                [{'Key': k, 'Value': v}
+                 for k, v in tag_delta['added'].items()])
+        if 'updated' in tag_delta:
+            tags.extend(
+                [{'Key': k, 'Value': v}
+                 for k, v in tag_delta['updated'].items()])
+        if tags:
+            self.retry(client.create_tags, Resources=[group['GroupId']], Tags=tags)
+
+    def process_rules(self, client, rule_type, group, delta):
+        key, revoke_op, auth_op = self.RULE_TYPE_MAP[rule_type]
+        revoke, authorize = getattr(
+            client, revoke_op), getattr(client, auth_op)
+
+        # Process removes
+        if 'removed' in delta:
+            self.retry(revoke, GroupId=group['GroupId'],
+                       IpPermissions=[r for r in delta['removed']])
+
+        # Process adds
+        if 'added' in delta:
+            self.retry(authorize, GroupId=group['GroupId'],
+                       IpPermissions=[r for r in delta['added']])
 
 
 class SGUsage(Filter):
@@ -181,6 +368,41 @@ class UsedSecurityGroup(SGUsage):
         return [r for r in resources if r['GroupId'] not in unused]
 
 
+@SecurityGroup.filter_registry.register('stale')
+class Stale(Filter):
+    """Filter to find security groups that contain stale references
+    to other groups that are either no longer present or traverse
+    a broken vpc peering connection. Note this applies to VPC
+    Security groups only and will implicitly filter security groups.
+
+    AWS Docs - https://goo.gl/nSj7VG
+    """
+    schema = type_schema('stale')
+
+    def process(self, resources, events):
+        client = local_session(self.manager.session_factory).client('ec2')
+        vpc_ids = set([r['VpcId'] for r in resources if 'VpcId' in r])
+        group_map = {r['GroupId']: r for r in resources}
+        results = []
+        self.log.debug("Querying %d vpc for stale refs", len(vpc_ids))
+        stale_count = 0
+        for vpc_id in vpc_ids:
+            stale_groups = client.describe_stale_security_groups(
+                VpcId=vpc_id).get('StaleSecurityGroupSet', ())
+            stale_count += len(stale_groups)
+            for s in stale_groups:
+                if s['GroupId'] in group_map:
+                    r = group_map[s['GroupId']]
+                    if 'StaleIpPermissions' in s:
+                        r['MatchedIpPermissions'] = s['StaleIpPermissions']
+                    if 'StaleIpPermissionsEgress' in s:
+                        r['MatchedIpPermissionsEgress'] = s[
+                            'StaleIpPermissionsEgress']
+                    results.append(r)
+        self.log.debug("Found %d stale security groups", stale_count)
+        return results
+
+
 @SecurityGroup.filter_registry.register('default-vpc')
 class SGDefaultVpc(DefaultVpcBase):
 
@@ -193,13 +415,14 @@ class SGDefaultVpc(DefaultVpcBase):
 
 
 class SGPermission(Filter):
-    """Base class for verifying security group permissions
+    """Filter for verifying security group ingress and egress permissions
 
     All attributes of a security group permission are available as
     value filters.
 
     If multiple attributes are specified the permission must satisfy
-    all of them.
+    all of them. Note that within an attribute match against a list value
+    of a permission we default to or.
 
     If a group has any permissions that match all conditions, then it
     matches the filter.
@@ -207,21 +430,50 @@ class SGPermission(Filter):
     Permissions that match on the group are annotated onto the group and
     can subsequently be used by the remove-permission action.
 
-    An example::
+    We have specialized handling for matching `Ports` in ingress/egress
+    permission From/To range. The following example matches on ingress
+    rules which allow for a range that includes all of the given ports.
+
+    .. code-block: yaml
+
+      - type: ingress
+        Ports: [22, 443, 80]
+
+    As well for verifying that a rule only allows for a specific set of ports
+    as in the following example. The delta between this and the previous
+    example is that if the permission allows for any ports not specified here,
+    then the rule will match. ie. OnlyPorts is a negative assertion match,
+    it matches when a permission includes ports outside of the specified set.
+
+    .. code-block: yaml
+
+      - type: ingress
+        OnlyPorts: [22]
+
+    For simplifying ipranges handling which is specified as a list on a rule
+    we provide a `Cidr` key which can be used as a value type filter evaluated
+    against each of the rules. If any iprange cidr match then the permission
+    matches.
+
+    .. code-block: yaml
 
       - type: ingress
         IpProtocol: -1
         FromPort: 445
 
-    We have specialized handling for matching Ports in ingress/egress
-    permission From/To range::
+    We also have specialized handling for matching self-references in
+    ingress/egress permissions. The following example matches on ingress
+    rules which allow traffic its own same security group.
+
+    .. code-block: yaml
 
       - type: ingress
-        Ports: [22, 443, 80]
+        SelfReference: True
 
     As well for assertions that a ingress/egress permission only matches
-    a given set of ports, *note* onlyports is an inverse match, it matches
-    when a permission includes ports outside of the specified set:
+    a given set of ports, *note* OnlyPorts is an inverse match.
+
+    .. code-block: yaml
 
       - type: egress
         OnlyPorts: [22, 443, 80]
@@ -231,12 +483,13 @@ class SGPermission(Filter):
           - value_type: cidr
           - op: in
           - value: x.y.z
+
     """
 
     perm_attrs = set((
         'IpProtocol', 'FromPort', 'ToPort', 'UserIdGroupPairs',
         'IpRanges', 'PrefixListIds'))
-    filter_attrs = set(('Cidr', 'Ports', 'OnlyPorts'))
+    filter_attrs = set(('Cidr', 'Ports', 'OnlyPorts', 'SelfReference'))
     attrs = perm_attrs.union(filter_attrs)
 
     def validate(self):
@@ -264,23 +517,23 @@ class SGPermission(Filter):
         return super(SGPermission, self).process(resources, event)
 
     def process_ports(self, perm):
-        found = False
+        found = None
         if 'FromPort' in perm and 'ToPort' in perm:
             for port in self.ports:
                 if port >= perm['FromPort'] and port <= perm['ToPort']:
                     found = True
                     break
+                found = False
             only_found = False
             for port in self.only_ports:
                 if port == perm['FromPort'] and port == perm['ToPort']:
                     only_found = True
             if self.only_ports and not only_found:
-                found = True
+                found = found is None or found and True or False
         return found
 
     def process_cidrs(self, perm):
-        found = False
-
+        found = None
         if 'IpRanges' in perm and 'Cidr' in self.data:
             match_range = self.data['Cidr']
             match_range['key'] = 'CidrIp'
@@ -290,21 +543,45 @@ class SGPermission(Filter):
                 found = vf(ip_range)
                 if found:
                     break
+                else:
+                    found = False
+        return found
+
+    def process_self_reference(self, perm, sg_id):
+        found = None
+        if 'UserIdGroupPairs' in perm and 'SelfReference' in self.data:
+            self_reference = sg_id in [p['GroupId']
+                                       for p in perm['UserIdGroupPairs']]
+            found = self_reference & self.data['SelfReference']
         return found
 
     def __call__(self, resource):
         matched = []
+        sg_id = resource['GroupId']
         for perm in resource[self.ip_permissions_key]:
-            found = False
+            found = None
             for f in self.vfilters:
                 if f(perm):
                     found = True
+                else:
+                    found = False
                     break
-            if not found:
-                found = self.process_ports(perm)
-            if not found:
-                found = self.process_cidrs(perm)
-
+            if found is None or found:
+                port_found = self.process_ports(perm)
+                if port_found is not None:
+                    found = (
+                        found is not None and port_found & found or port_found)
+            if found is None or found:
+                cidr_found = self.process_cidrs(perm)
+                if cidr_found is not None:
+                    found = (
+                        found is not None and cidr_found & found or cidr_found)
+            if found is None or found:
+                self_reference_found = self.process_self_reference(perm, sg_id)
+                if self_reference_found is not None:
+                    found = (
+                        found is not None and
+                        self_reference_found & found or self_reference_found)
             if not found:
                 continue
             matched.append(perm)
@@ -323,7 +600,8 @@ class IPPermission(SGPermission):
         #'additionalProperties': True,
         'properties': {
             'type': {'enum': ['ingress']},
-            'Ports': {'type': 'array', 'items': {'type': 'integer'}}
+            'Ports': {'type': 'array', 'items': {'type': 'integer'}},
+            'SelfReference': {'type': 'boolean'}
             },
         'required': ['type']}
 
@@ -336,7 +614,8 @@ class IPPermissionEgress(SGPermission):
         'type': 'object',
         #'additionalProperties': True,
         'properties': {
-            'type': {'enum': ['egress']}
+            'type': {'enum': ['egress']},
+            'SelfReference': {'type': 'boolean'}
             },
         'required': ['type']}
 

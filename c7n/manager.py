@@ -26,7 +26,6 @@ class ResourceManager(object):
 
     filter_registry = None
     action_registry = None
-
     executor_factory = ThreadPoolExecutor
 
     def __init__(self, ctx, data):
@@ -49,18 +48,27 @@ class ResourceManager(object):
     def format_json(self, resources, fh):
         return dumps(resources, fh, indent=2)
 
+    def match_ids(self, ids):
+        """return ids that match this resource type's id format."""
+        return ids
+
     def get_resources(self, resource_ids):
         """Retrieve a set of resources by id."""
         return []
 
     def filter_resources(self, resources, event=None):
         original = len(resources)
+        if event and event.get('debug', False):
+            self.log.info(
+                "Filtering resources with %s", self.filters)
         for f in self.filters:
             if not resources:
                 break
-            if event and event['debug']:
-                self.log.info("applying filter %s", f)
+            rcount = len(resources)
             resources = f.process(resources, event)
+            if event and event.get('debug', False):
+                self.log.info(
+                    "applied filter %s %d->%d", f, rcount, len(resources))
         self.log.info("Filtered from %d to %d %s" % (
             original, len(resources), self.__class__.__name__.lower()))
         return resources
