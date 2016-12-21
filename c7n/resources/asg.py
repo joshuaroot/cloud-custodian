@@ -510,7 +510,7 @@ class LaunchActivityFilter(Filter):
                     days: 7
     """
     schema = type_schema(
-        'launch-failure',
+        'launch-activity',
         status={'type': 'string'},
         days={'type': 'number'})
 
@@ -537,7 +537,6 @@ class LaunchActivityFilter(Filter):
             for asg_set in utils.chunks(asgs, 10):
                 list(w.map(self.asg_activities, asg_set))
         return [a for a in asgs if len(a['c7n.Activities']) > 0]
-
 
 
 @actions.register('tag-trim')
