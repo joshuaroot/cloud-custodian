@@ -332,30 +332,47 @@ class AutoScalingTest(BaseTest):
         self.assertEqual(len(resources), 1)
         self.assertEqual(resources[0]['AutoScalingGroupName'], 'ContainersFTW')
 
+    def test_asg_activity_filter(self):
+        session = self.replay_flight_data('test_asg_launch_activity_filter')
+        self.patch(LaunchActivityFilter, 'executor_factory', MainThreadExecutor)
+        p = self.load_policy({
+            'name': 'asg-activities',
+            'resource': 'asg',
+            'filters': [{
+                'or': [
+                    {'type': 'launch-activity', 'status': 'Failed'},
+                    {'type': 'launch-activity', 'status': 'Successful'}]
+            }]}, session_factory=session)
+        resources = p.run()
+        self.assertEqual(len(resources), 2)
+        self.assertEqual(
+            sorted([r['AutoScalingGroupName'] for r in resources]),
+            ['c7n.asg.failure', 'c7n.asg.success'])
+
     def test_asg_activity_failed_filter(self):
         session = self.replay_flight_data('test_asg_launch_activity_failure')
         self.patch(LaunchActivityFilter, 'executor_factory', MainThreadExecutor)
         p = self.load_policy({
             'name': 'failed-asg-build',
             'resource': 'asg',
-            'filters': [{
-                'type': 'launch-activity',
-                'status': 'Failed'}]}, session_factory=session)
+            'filters': [
+                {'type': 'launch-activity', 'status': 'Failed'}
+            ]}, session_factory=session)
         resources = p.run()
         self.assertEqual(len(resources), 1)
         self.assertEqual(
-            resources[0]['AutoScalingGroupName'], 'c7n-asg-launch-failure')
+            resources[0]['AutoScalingGroupName'], 'c7n.asg.failure')
 
     def test_asg_activity_success_filter(self):
         session = self.replay_flight_data('test_asg_launch_activity_success')
         self.patch(LaunchActivityFilter, 'executor_factory', MainThreadExecutor)
         p = self.load_policy({
-            'name': 'failed-asg-build',
+            'name': 'success-asg-build',
             'resource': 'asg',
-            'filters': [{
-                'type': 'launch-activity',
-                'status': 'Successful'}]}, session_factory=session)
+            'filters': [
+                {'type': 'launch-activity', 'status': 'Successful'}
+            ]}, session_factory=session)
         resources = p.run()
-        self.assertEqual(len(resources), 2)
+        self.assertEqual(len(resources), 1)
         self.assertEqual(
-            resources[0]['AutoScalingGroupName'], 'c7n-asg-launch-success')
+            resources[0]['AutoScalingGroupName'], 'c7n.asg.success')

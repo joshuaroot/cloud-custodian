@@ -3,22 +3,22 @@
     "data": {
         "AutoScalingGroups": [
             {
-                "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:185106417252:autoScalingGroup:749cd48a-cd55-4d2c-a7b1-67d086c7787b:autoScalingGroupName/c7n-asg-launch-failure", 
+                "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:185106417252:autoScalingGroup:9e27b57d-c5d0-4ae8-bfa1-f98baf964a1f:autoScalingGroupName/c7n.asg.failure", 
                 "TargetGroupARNs": [], 
                 "SuspendedProcesses": [], 
                 "DesiredCapacity": 1, 
                 "Tags": [
                     {
                         "ResourceType": "auto-scaling-group", 
-                        "ResourceId": "c7n-asg-launch-failure", 
+                        "ResourceId": "c7n.asg.failure", 
                         "PropagateAtLaunch": true, 
-                        "Value": "c7n-asg-ec2-failure", 
+                        "Value": "c7n.ec2.failure", 
                         "Key": "Name"
                     }
                 ], 
                 "EnabledMetrics": [], 
                 "LoadBalancerNames": [], 
-                "AutoScalingGroupName": "c7n-asg-launch-failure", 
+                "AutoScalingGroupName": "c7n.asg.failure", 
                 "DefaultCooldown": 300, 
                 "MinSize": 1, 
                 "Instances": [], 
@@ -28,16 +28,16 @@
                 "TerminationPolicies": [
                     "Default"
                 ], 
-                "LaunchConfigurationName": "c7n-launch-config-failure", 
+                "LaunchConfigurationName": "c7n.launchconfig.test", 
                 "CreatedTime": {
-                    "hour": 20, 
+                    "hour": 17, 
                     "__class__": "datetime", 
-                    "month": 12, 
-                    "second": 16, 
-                    "microsecond": 853000, 
-                    "year": 2016, 
-                    "day": 20, 
-                    "minute": 55
+                    "month": 1, 
+                    "second": 35, 
+                    "microsecond": 644000, 
+                    "year": 2017, 
+                    "day": 3, 
+                    "minute": 23
                 }, 
                 "AvailabilityZones": [
                     "us-east-1e"
@@ -46,99 +46,32 @@
                 "NewInstancesProtectedFromScaleIn": false
             }, 
             {
-                "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:185106417252:autoScalingGroup:dac7b369-bf6f-4b89-bac8-cd0079e7c25d:autoScalingGroupName/c7n-asg-launch-success", 
+                "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:185106417252:autoScalingGroup:38dd73e4-7bd3-4b2c-8cc4-33a65e44599d:autoScalingGroupName/c7n.asg.success", 
                 "TargetGroupARNs": [], 
                 "SuspendedProcesses": [], 
                 "DesiredCapacity": 1, 
                 "Tags": [
                     {
                         "ResourceType": "auto-scaling-group", 
-                        "ResourceId": "c7n-asg-launch-success", 
-                        "PropagateAtLaunch": false, 
-                        "Value": "c7n-launch-success", 
+                        "ResourceId": "c7n.asg.success", 
+                        "PropagateAtLaunch": true, 
+                        "Value": "c7n.ec2.success", 
                         "Key": "Name"
-                    }, 
-                    {
-                        "ResourceType": "auto-scaling-group", 
-                        "ResourceId": "c7n-asg-launch-success", 
-                        "PropagateAtLaunch": true, 
-                        "Value": "TestValue", 
-                        "Key": "TestTag"
                     }
                 ], 
                 "EnabledMetrics": [], 
                 "LoadBalancerNames": [], 
-                "AutoScalingGroupName": "c7n-asg-launch-success", 
+                "AutoScalingGroupName": "c7n.asg.success", 
                 "DefaultCooldown": 300, 
                 "MinSize": 1, 
                 "Instances": [
                     {
                         "ProtectedFromScaleIn": false, 
                         "AvailabilityZone": "us-east-1b", 
-                        "InstanceId": "i-08790aa60cf975eb5", 
+                        "InstanceId": "i-037ba64092f7459a6", 
                         "HealthStatus": "Healthy", 
                         "LifecycleState": "InService", 
-                        "LaunchConfigurationName": "c7n-launch-config-failure"
-                    }
-                ], 
-                "MaxSize": 3, 
-                "VPCZoneIdentifier": "subnet-ea6429a3,subnet-2c5dcf01", 
-                "HealthCheckGracePeriod": 300, 
-                "TerminationPolicies": [
-                    "Default"
-                ], 
-                "LaunchConfigurationName": "c7n-launch-config-failure", 
-                "CreatedTime": {
-                    "hour": 16, 
-                    "__class__": "datetime", 
-                    "month": 12, 
-                    "second": 55, 
-                    "microsecond": 686000, 
-                    "year": 2016, 
-                    "day": 15, 
-                    "minute": 1
-                }, 
-                "AvailabilityZones": [
-                    "us-east-1a", 
-                    "us-east-1b"
-                ], 
-                "HealthCheckType": "EC2", 
-                "NewInstancesProtectedFromScaleIn": false
-            }, 
-            {
-                "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:185106417252:autoScalingGroup:15db3545-6740-45cb-b610-11cf5df035a2:autoScalingGroupName/c7n-tag-no-match", 
-                "TargetGroupARNs": [], 
-                "SuspendedProcesses": [], 
-                "DesiredCapacity": 1, 
-                "Tags": [
-                    {
-                        "ResourceType": "auto-scaling-group", 
-                        "ResourceId": "c7n-tag-no-match", 
-                        "PropagateAtLaunch": true, 
-                        "Value": "TestValue", 
-                        "Key": "TestKey"
-                    }, 
-                    {
-                        "ResourceType": "auto-scaling-group", 
-                        "ResourceId": "c7n-tag-no-match", 
-                        "PropagateAtLaunch": false, 
-                        "Value": "TestValue", 
-                        "Key": "TestTag"
-                    }
-                ], 
-                "EnabledMetrics": [], 
-                "LoadBalancerNames": [], 
-                "AutoScalingGroupName": "c7n-tag-no-match", 
-                "DefaultCooldown": 300, 
-                "MinSize": 1, 
-                "Instances": [
-                    {
-                        "ProtectedFromScaleIn": false, 
-                        "AvailabilityZone": "us-east-1b", 
-                        "InstanceId": "i-038197e2c4c066b6b", 
-                        "HealthStatus": "Healthy", 
-                        "LifecycleState": "InService", 
-                        "LaunchConfigurationName": "c7n-launch-config-failure"
+                        "LaunchConfigurationName": "c7n.launchconfig.test"
                     }
                 ], 
                 "MaxSize": 1, 
@@ -147,16 +80,16 @@
                 "TerminationPolicies": [
                     "Default"
                 ], 
-                "LaunchConfigurationName": "c7n-launch-config-failure", 
+                "LaunchConfigurationName": "c7n.launchconfig.test", 
                 "CreatedTime": {
                     "hour": 17, 
                     "__class__": "datetime", 
-                    "month": 12, 
-                    "second": 10, 
-                    "microsecond": 110000, 
-                    "year": 2016, 
-                    "day": 20, 
-                    "minute": 42
+                    "month": 1, 
+                    "second": 3, 
+                    "microsecond": 264000, 
+                    "year": 2017, 
+                    "day": 3, 
+                    "minute": 23
                 }, 
                 "AvailabilityZones": [
                     "us-east-1b"
@@ -168,13 +101,13 @@
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "ff8661e0-c6f6-11e6-a784-3342b145195e", 
+            "RequestId": "f0577d2c-d1da-11e6-8cee-036d024261dc", 
             "HTTPHeaders": {
-                "x-amzn-requestid": "ff8661e0-c6f6-11e6-a784-3342b145195e", 
+                "x-amzn-requestid": "f0577d2c-d1da-11e6-8cee-036d024261dc", 
                 "vary": "Accept-Encoding", 
-                "content-length": "6292", 
+                "content-length": "3715", 
                 "content-type": "text/xml", 
-                "date": "Tue, 20 Dec 2016 20:58:03 GMT"
+                "date": "Tue, 03 Jan 2017 17:34:54 GMT"
             }
         }
     }
