@@ -262,7 +262,14 @@ class Tag(Action):
         tags={'type': 'object'},
         key={'type': 'string'},
         value={'type': 'string'},
+        tag={'type': 'string'},
         )
+
+    def validate(self):
+        if self.data.get('key') and self.data.get('tag'):
+            raise FilterValidationError(
+                "Can't specify both key and tag, choose one")
+        return self
 
     def process(self, resources):
         self.id_key = self.manager.get_model().id
@@ -526,9 +533,12 @@ class TagDelayedAction(Action):
             Tags=tags,
             DryRun=self.manager.config.dryrun)
 
+
 class NormalizeTag(Action):
     """Transform the value of a tag.
-    Set the tag value to uppercase, title, lowercase. Strip text from a tag key.
+
+    Set the tag value to uppercase, title, lowercase, or strip text
+    from a tag key.
 
     .. code-block :: yaml
 
@@ -565,12 +575,15 @@ class NormalizeTag(Action):
     schema = utils.type_schema(
         'normalize-tag',
         key={'type': 'string'},
-        action={'type': 'array', 'items': {
-            'enum': ['upper', 'lower', 'title' 'strip', 'replace']}},
+        action={'type': 'string',
+                'items': {
+                    'enum': ['upper', 'lower', 'title' 'strip', 'replace']}},
         value={'type': 'string'})
 
     def create_tag(self, client, ids, key, value):
-        client.create_tags(
+
+        self.manager.retry(
+            client.create_tags,
             Resources=ids,
             Tags=[{'Key': key, 'Value': value}])
 
@@ -582,7 +595,8 @@ class NormalizeTag(Action):
         - Transform Tag value
         - Assign new value for key
         """
-        self.log.info("Transforming tag value on %s instances" % (len(resource_set)))
+        self.log.info("Transforming tag value on %s instances" % (
+            len(resource_set)))
         key = self.data.get('key')
 
         c = utils.local_session(self.manager.session_factory).client('ec2')
@@ -596,7 +610,8 @@ class NormalizeTag(Action):
         elif self.data.get('action') == 'strip' and self.data.get('value'):
             new_value = tag_value.strip(self.data.get('value'))
         else:
-            self.log.error("%s is an invalid action type" % (self.data.get('action')))
+            self.log.error(
+                "%s is an invalid action type" % (self.data.get('action')))
 
         self.create_tag(
             c,
