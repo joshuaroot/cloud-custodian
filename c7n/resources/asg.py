@@ -627,6 +627,7 @@ class LaunchActivityFilter(Filter):
                 'Failed', 'Cancelled']},
         days={'type': 'number'},
         required=('status',))
+    permissions = ('autoscaling:DescribeScalingActivities',)
 
     @worker
     def asg_activities(self, asg):
