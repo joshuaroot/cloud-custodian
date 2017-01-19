@@ -31,6 +31,7 @@ from c7n.filters import (
 from c7n.filters.offhours import OffHour, OnHour
 import c7n.filters.vpc as net_filters
 
+from c7n import utils
 from c7n.manager import resources
 from c7n.query import QueryResourceManager
 from c7n.tags import TagActionFilter, DEFAULT_TAG, TagCountFilter, TagTrim
@@ -596,6 +597,60 @@ class VpcIdFilter(ValueFilter):
             for a in s_asgs:
                 a['VpcId'] = all_subnets[s]['VpcId']
         return super(VpcIdFilter, self).process(asgs)
+
+
+@filters.register('launch-activity')
+class LaunchActivityFilter(Filter):
+    """Filter ASG based on launch activity status
+
+    :example:
+
+        .. code-block: yaml
+
+            policies:
+              - name: asg-launch-failures-weekly
+                resource: asg
+                filters:
+                  - launch-activity
+                    status: Failed
+                    days: 7
+    """
+    schema = type_schema(
+        'launch-activity',
+        status={
+            'type': 'string',
+            'enum': [
+                'PendingSpotBidPlacement', 'WaitingForSpotInstanceRequestId',
+                'WaitingForSpotInstanceId', 'WaitingForInstanceId',
+                'PreInService', 'InProgress', 'WaitingForELBConnectionDraining',
+                'MidLifecycleAction', 'WaitingForInstanceWarmup', 'Successful',
+                'Failed', 'Cancelled']},
+        days={'type': 'number'},
+        required=('status',))
+    permissions = ('autoscaling:DescribeScalingActivities',)
+
+    @worker
+    def asg_activities(self, asg):
+        if 'c7n:Activities' not in asg:
+            asg['c7n:Activities'] = []
+        client = local_session(
+            self.manager.session_factory).client('autoscaling')
+        p = client.get_paginator('describe_scaling_activities')
+        for activity in p.paginate(
+                AutoScalingGroupName=asg['AutoScalingGroupName']):
+            for a in activity['Activities']:
+                if self.data.get('days'):
+                    if a['StartTime'].replace(tzinfo=tzutc()) < datetime.now(
+                            tz=tzutc()) - timedelta(days=self.data.get('days')):
+                        break
+                if a['StatusCode'] == self.data.get('status'):
+                    asg['c7n:Activities'].append(a)
+
+    def process(self, asgs, event=None):
+        with self.executor_factory(max_workers=2) as w:
+            for asg_set in utils.chunks(asgs, 10):
+                list(w.map(self.asg_activities, asg_set))
+        return [a for a in asgs if len(a['c7n:Activities']) > 0]
 
 
 @actions.register('tag-trim')
