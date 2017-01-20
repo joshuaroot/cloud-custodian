@@ -339,15 +339,14 @@ class AutoScalingTest(BaseTest):
             'name': 'asg-activities',
             'resource': 'asg',
             'filters': [{
-                'or': [
-                    {'type': 'launch-activity', 'status': 'Failed'},
-                    {'type': 'launch-activity', 'status': 'Successful'}]
-            }]}, session_factory=session)
+                'type': 'launch-activity',
+                'status': ['Successful', 'Failed']}]
+            }, session_factory=session)
         resources = p.run()
         self.assertEqual(len(resources), 2)
         self.assertEqual(
             sorted([r['AutoScalingGroupName'] for r in resources]),
-            ['c7n.asg.failure', 'c7n.asg.success'])
+            ['c7n-asg-launch-failure', 'c7n-asg-launch-success'])
 
     def test_asg_activity_failed_filter(self):
         session = self.replay_flight_data('test_asg_launch_activity_failure')
@@ -356,7 +355,7 @@ class AutoScalingTest(BaseTest):
             'name': 'failed-asg-build',
             'resource': 'asg',
             'filters': [
-                {'type': 'launch-activity', 'status': 'Failed'}
+                {'type': 'launch-activity', 'status': ['Failed']}
             ]}, session_factory=session)
         resources = p.run()
         self.assertEqual(len(resources), 1)
@@ -370,7 +369,7 @@ class AutoScalingTest(BaseTest):
             'name': 'success-asg-build',
             'resource': 'asg',
             'filters': [
-                {'type': 'launch-activity', 'status': 'Successful'}
+                {'type': 'launch-activity', 'status': ['Successful']}
             ]}, session_factory=session)
         resources = p.run()
         self.assertEqual(len(resources), 1)
