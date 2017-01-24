@@ -621,11 +621,12 @@ class LaunchActivityFilter(Filter):
             'type': 'array',
             'items': {
                 'enum': [
-                    'PendingSpotBidPlacement', 'WaitingForSpotInstanceRequestId',
-                    'WaitingForSpotInstanceId', 'WaitingForInstanceId',
-                    'PreInService', 'InProgress', 'WaitingForELBConnectionDraining',
-                    'MidLifecycleAction', 'WaitingForInstanceWarmup', 'Successful',
-                    'Failed', 'Cancelled']}},
+                    'Successful', 'Failed', 'Cancelled', 'PreInService',
+                    'InProgress', 'PendingSpotBidPlacement',
+                    'WaitingForSpotInstanceRequestId', 'WaitingForInstanceId',
+                    'WaitingForSpotInstanceId', 'MidLifecycleAction',
+                    'WaitingForELBConnectionDraining',
+                    'WaitingForInstanceWarmup']}},
         days={'type': 'number'},
         required=('status',))
     permissions = ('autoscaling:DescribeScalingActivities',)
