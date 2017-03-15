@@ -607,7 +607,7 @@ class LaunchActivityFilter(Filter):
               - name: asg-launch-failures-weekly
                 resource: asg
                 filters:
-                  - launch-activity
+                  - type: launch-activity
                     status: ['Failed']
                     days: 7
     """
@@ -636,17 +636,27 @@ class LaunchActivityFilter(Filter):
                 AutoScalingGroupName=asg['AutoScalingGroupName']):
             for a in activity['Activities']:
                 if self.data.get('days'):
+                    # if value for days is provided, break after reaching an
+                    # event that is older that desired
                     if a['StartTime'].replace(tzinfo=tzutc()) < datetime.now(
                             tz=tzutc()) - timedelta(days=self.data.get('days')):
                         break
-                if a['StatusCode'] in self.data.get('status'):
-                    asg.setdefault('c7n:Activities', []).append(a)
+
+                asg.setdefault('c7n:Status', [])
+                if str(a['StatusCode']) not in asg['c7n:Status']:
+                    asg['c7n:Status'].append(str(a['StatusCode']))
 
     def process(self, asgs, event=None):
         with self.executor_factory(max_workers=2) as w:
             for asg_set in utils.chunks(asgs, size=10):
                 list(w.map(self.asg_activities, asg_set))
-        return [a for a in asgs if 'c7n:Activities' in a]
+        results = []
+        for a in asgs:
+            for s in a['c7n:Status']:
+                if s in self.data.get('status', ['Successful']):
+                    results.append(a)
+        return results
+
 
 
 @actions.register('tag-trim')

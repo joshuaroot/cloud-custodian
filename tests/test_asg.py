@@ -339,9 +339,10 @@ class AutoScalingTest(BaseTest):
             'name': 'asg-activities',
             'resource': 'asg',
             'filters': [{
-                'type': 'launch-activity',
-                'status': ['Successful', 'Failed']}]
-            }, session_factory=session)
+                "or": [
+                    {'type': 'launch-activity', 'status': ['Successful']},
+                    {'type': 'launch-activity', 'status': ['Failed']}
+                ]}]}, session_factory=session)
         resources = p.run()
         self.assertEqual(len(resources), 2)
         self.assertEqual(
