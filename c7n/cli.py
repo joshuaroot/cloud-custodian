@@ -36,6 +36,8 @@ from c7n.commands import schema_completer
 
 DEFAULT_REGION = 'us-east-1'
 
+log = logging.getLogger('custodian.cli')
+
 
 def _default_options(p, blacklist=""):
     """ Add basic options ot the subparser.
@@ -94,6 +96,24 @@ def _default_options(p, blacklist=""):
         p.add_argument("--cache", default=None, help=argparse.SUPPRESS)
 
 
+def _default_region(options):
+    marker = object()
+    value = getattr(options, 'region', marker)
+    if value is marker:
+        return
+
+    if value is not None:
+        return
+
+    profile = getattr(options, 'profile', None)
+    try:
+        import boto3
+        options.region = boto3.Session(profile_name=profile).region_name
+        log.debug("using default region:%s from boto" % options.region)
+    except:
+        return
+
+
 def _report_options(p):
     """ Add options specific to the report subcommand. """
     _default_options(p, blacklist=['region', 'cache', 'log-group'])
@@ -111,6 +131,10 @@ def _report_options(p):
     p.add_argument(
         '--no-default-fields', action="store_true",
         help='Exclude default fields for report.')
+    p.add_argument(
+        '--format', default='csv', choices=['csv', 'grid', 'simple'],
+        help="Format to output data in (default: %(default)s). "\
+            "Options include simple, grid, rst")
 
     # We don't include `region` because the report command ignores it
     p.add_argument("--region", default=DEFAULT_REGION, help=argparse.SUPPRESS)
@@ -196,7 +220,9 @@ def setup_parser():
     # later on when doing post-parsing validation.
     subs = parser.add_subparsers(dest='subparser')
 
-    report_desc = "CSV report of resources that a policy matched/ran on"
+    report_desc = ("Report of resources that a policy matched/ran on. "
+                   "The default output format is csv, but other formats "
+                   "are available.")
     report = subs.add_parser(
         "report", description=report_desc, help=report_desc)
     report.set_defaults(command="c7n.commands.report")
@@ -224,14 +250,13 @@ def setup_parser():
         "--debug", action="store_true",
         help="Print info for bug reports")
 
-
     validate_desc = (
         "Validate config files against the json schema")
     validate = subs.add_parser(
         'validate', description=validate_desc, help=validate_desc)
     validate.set_defaults(command="c7n.commands.validate")
     validate.add_argument(
-        "-c", "--config", help = argparse.SUPPRESS)
+        "-c", "--config", help=argparse.SUPPRESS)
     validate.add_argument("configs", nargs='*',
                           help="Policy Configuration File(s)")
     validate.add_argument("-v", "--verbose", action="store_true",
@@ -284,6 +309,8 @@ def main():
     # Support the deprecated -c option
     if getattr(options, 'config', None) is not None:
         options.configs.append(options.config)
+
+    _default_region(options)
 
     try:
         command = options.command
