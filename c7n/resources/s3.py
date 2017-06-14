@@ -37,6 +37,8 @@ Actions:
    delivery.
 
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import functools
 import json
 import itertools
@@ -689,6 +691,10 @@ class ToggleLogging(BucketActionBase):
 @actions.register('attach-encrypt')
 class AttachLambdaEncrypt(BucketActionBase):
     """Action attaches lambda encryption policy to S3 bucket
+
+    supports attachment via lambda bucket notification or sns notification
+    to invoke lambda. a special topic value of `default` will utilize
+    an extant notification or create one matching the bucket name.
 
     :example:
 

@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from common import BaseTest, Bag, functional
+from .common import BaseTest, functional
 from c7n.filters import FilterValidationError
 
 
@@ -1058,3 +1059,23 @@ class SecurityGroupTest(BaseTest):
                  {'type': 'egress',
                   'InvalidKey': True},
                  {'GroupName': 'sg2'}]})
+
+    def test_vpc_by_security_group(self):
+        factory = self.replay_flight_data('test_vpc_by_security_group')
+        p = self.load_policy(
+            {
+                'name': 'vpc-sg',
+                'resource': 'vpc',
+                'filters': [
+                    {
+                        'type': 'security-group',
+                        'key': 'tag:Name',
+                        'value': 'FancyTestGroupPublic',
+                    },
+                ],
+            },
+            session_factory=factory,
+        )
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['Tags'][0]['Value'], 'FancyTestVPC')
