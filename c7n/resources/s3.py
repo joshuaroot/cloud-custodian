@@ -240,6 +240,50 @@ class S3Metrics(MetricsFilter):
              'Value': 'AllStorageTypes'}]
 
 
+@filters.register('cross-account-objects')
+class CrossAccountObjectFilter(Filter):
+    """Find bucket object created by other accounts.
+
+    :example:
+
+        .. code-block: yaml
+
+            policies:
+              - name: s3-cross-account-objects
+                resource: s3
+                region: us-east-1
+                filters:
+                  - type: cross-account-objects
+    """
+    permissions = (
+        's3:ListObjects',
+        's3:GetObject',)
+
+    def process_objects(self, bucket):
+        owner_id = bucket.get('Acl', {}).get('Owner', {}).get('ID', None)
+        if not owner_id:
+            return
+        s3 = bucket_client(local_session(self.manager.session_factory), bucket)
+        paginator = s3.get_paginator('list_objects')
+        results = []
+        for p in paginator.paginate(Bucket=bucket['Name']):
+            for c in p.get('Contents', []):
+                obj_owner = c.get('Owner', {}).get('ID', None)
+                if obj_owner != owner_id:
+                    bucket.setdefault(
+                        'c7n:cross_account_objects', []).append(
+                        '/'.join(filter(None, [p['Name'], p['Prefix'], c['Key']])))
+        if 'c7n:cross_account_objects' in bucket:
+            return bucket
+        return
+
+    def process(self, buckets, events=None):
+        with self.executor_factory(max_workers=3) as w:
+            results = w.map(self.process_objects, buckets)
+            results = list(filter(None, list(results)))
+            return results
+
+
 @filters.register('cross-account')
 class S3CrossAccountFilter(CrossAccountAccessFilter):
     """Filters cross-account access to S3 buckets

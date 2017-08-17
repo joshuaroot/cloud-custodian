@@ -1,0 +1,48 @@
+{
+    "status_code": 200, 
+    "data": {
+        "Name": "cross-account-test-sw", 
+        "ResponseMetadata": {
+            "HTTPStatusCode": 200, 
+            "RetryAttempts": 0, 
+            "HostId": "B45BLMEoskWiCnmp7QRfO3fZwg+Qw27V4uUMvfUmvVhPLBveMKJVXyGdYAhsVoLa/OaRGlJyqSA=", 
+            "RequestId": "3B3A20C99765B298", 
+            "HTTPHeaders": {
+                "x-amz-bucket-region": "us-east-1", 
+                "x-amz-id-2": "B45BLMEoskWiCnmp7QRfO3fZwg+Qw27V4uUMvfUmvVhPLBveMKJVXyGdYAhsVoLa/OaRGlJyqSA=", 
+                "server": "AmazonS3", 
+                "transfer-encoding": "chunked", 
+                "x-amz-request-id": "3B3A20C99765B298", 
+                "date": "Thu, 17 Aug 2017 20:03:05 GMT", 
+                "content-type": "application/xml"
+            }
+        }, 
+        "MaxKeys": 1000, 
+        "Prefix": "", 
+        "Marker": "", 
+        "EncodingType": "url", 
+        "IsTruncated": false, 
+        "Contents": [
+            {
+                "LastModified": {
+                    "hour": 19, 
+                    "__class__": "datetime", 
+                    "month": 8, 
+                    "second": 50, 
+                    "microsecond": 0, 
+                    "year": 2017, 
+                    "day": 17, 
+                    "minute": 1
+                }, 
+                "ETag": "\"d3aff0a0ffa78a63c2643e4ae012ae1a\"", 
+                "StorageClass": "STANDARD", 
+                "Key": "test_file.txt", 
+                "Owner": {
+                    "DisplayName": "joshua.root", 
+                    "ID": "8586d5f4ef656b9b2208e40529f9977a31168c0b031055e99fd1370626cfd2c8"
+                }, 
+                "Size": 35
+            }
+        ]
+    }
+}

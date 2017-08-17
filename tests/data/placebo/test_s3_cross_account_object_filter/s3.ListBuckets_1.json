@@ -1,0 +1,51 @@
+{
+    "status_code": 200, 
+    "data": {
+        "Owner": {
+            "DisplayName": "mandeep.bal", 
+            "ID": "e7c8bb65a5fc49cf906715eae09de9e4bb7861a96361ba79b833aa45f6833b15"
+        }, 
+        "Buckets": [
+            {
+                "CreationDate": {
+                    "hour": 18, 
+                    "__class__": "datetime", 
+                    "month": 8, 
+                    "second": 30, 
+                    "microsecond": 0, 
+                    "year": 2017, 
+                    "day": 17, 
+                    "minute": 46
+                }, 
+                "Name": "cross-account-test-sw"
+            }, 
+            {
+                "CreationDate": {
+                    "hour": 15, 
+                    "__class__": "datetime", 
+                    "month": 8, 
+                    "second": 15, 
+                    "microsecond": 0, 
+                    "year": 2017, 
+                    "day": 17, 
+                    "minute": 41
+                }, 
+                "Name": "test091823475"
+            }
+        ], 
+        "ResponseMetadata": {
+            "HTTPStatusCode": 200, 
+            "RetryAttempts": 0, 
+            "HostId": "Q80ldJb8ctstdqPLV1O83Vura94Leg5bd0lL5T3ZIUYCBtQf6l41QnpRsHW2FpYW+1WNO1OURmE=", 
+            "RequestId": "D8589D9A78F64EDE", 
+            "HTTPHeaders": {
+                "x-amz-id-2": "Q80ldJb8ctstdqPLV1O83Vura94Leg5bd0lL5T3ZIUYCBtQf6l41QnpRsHW2FpYW+1WNO1OURmE=", 
+                "server": "AmazonS3", 
+                "transfer-encoding": "chunked", 
+                "x-amz-request-id": "D8589D9A78F64EDE", 
+                "date": "Thu, 17 Aug 2017 20:03:03 GMT", 
+                "content-type": "application/xml"
+            }
+        }
+    }
+}
