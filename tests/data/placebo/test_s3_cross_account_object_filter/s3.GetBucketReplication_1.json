@@ -4,23 +4,21 @@
         "ResponseMetadata": {
             "HTTPStatusCode": 404, 
             "RetryAttempts": 0, 
-            "HostId": "r/QU2VAofuFGPWlMdbFAn8w2RI87vzV+MWpkeOEN+NLjkf4yrWAskzNVLZVtw5QTXkfzhva5hKw=", 
-            "RequestId": "205B406F35C5037E", 
+            "HostId": "lR6IQdEJsp9I5dsEiULJ/cUIOSsEex47ukFZoNr1yPdQJh9CiWZ4XuU13xoL6T5nQ1DUKs60WcU=", 
+            "RequestId": "B70B7CA889E5EF36", 
             "HTTPHeaders": {
-                "x-amz-id-2": "r/QU2VAofuFGPWlMdbFAn8w2RI87vzV+MWpkeOEN+NLjkf4yrWAskzNVLZVtw5QTXkfzhva5hKw=", 
+                "x-amz-id-2": "lR6IQdEJsp9I5dsEiULJ/cUIOSsEex47ukFZoNr1yPdQJh9CiWZ4XuU13xoL6T5nQ1DUKs60WcU=", 
                 "server": "AmazonS3", 
                 "transfer-encoding": "chunked", 
-                "x-amz-request-id": "205B406F35C5037E", 
-                "date": "Thu, 17 Aug 2017 20:03:03 GMT", 
+                "x-amz-request-id": "B70B7CA889E5EF36", 
+                "date": "Fri, 18 Aug 2017 14:41:30 GMT", 
                 "content-type": "application/xml"
             }
         }, 
         "Error": {
             "Message": "The replication configuration was not found", 
             "Code": "ReplicationConfigurationNotFoundError", 
-            "BucketName": "test091823475"
+            "BucketName": "cross-account-test-sw"
         }
-    }
-}
     }
 }

@@ -8,42 +8,29 @@
         "Buckets": [
             {
                 "CreationDate": {
-                    "hour": 18, 
+                    "hour": 14, 
                     "__class__": "datetime", 
                     "month": 8, 
-                    "second": 30, 
+                    "second": 16, 
                     "microsecond": 0, 
                     "year": 2017, 
-                    "day": 17, 
-                    "minute": 46
+                    "day": 18, 
+                    "minute": 0
                 }, 
                 "Name": "cross-account-test-sw"
-            }, 
-            {
-                "CreationDate": {
-                    "hour": 15, 
-                    "__class__": "datetime", 
-                    "month": 8, 
-                    "second": 15, 
-                    "microsecond": 0, 
-                    "year": 2017, 
-                    "day": 17, 
-                    "minute": 41
-                }, 
-                "Name": "test091823475"
             }
         ], 
         "ResponseMetadata": {
             "HTTPStatusCode": 200, 
             "RetryAttempts": 0, 
-            "HostId": "Q80ldJb8ctstdqPLV1O83Vura94Leg5bd0lL5T3ZIUYCBtQf6l41QnpRsHW2FpYW+1WNO1OURmE=", 
-            "RequestId": "D8589D9A78F64EDE", 
+            "HostId": "mhQfQHy3Rx1p4NVhPqXNyFwDLC70WQrq4UEAH5ZKKMjcAnee3VwjS6aPG434lF9OQ4ZRunPH5ro=", 
+            "RequestId": "6BF2EC5F8C04F563", 
             "HTTPHeaders": {
-                "x-amz-id-2": "Q80ldJb8ctstdqPLV1O83Vura94Leg5bd0lL5T3ZIUYCBtQf6l41QnpRsHW2FpYW+1WNO1OURmE=", 
+                "x-amz-id-2": "mhQfQHy3Rx1p4NVhPqXNyFwDLC70WQrq4UEAH5ZKKMjcAnee3VwjS6aPG434lF9OQ4ZRunPH5ro=", 
                 "server": "AmazonS3", 
                 "transfer-encoding": "chunked", 
-                "x-amz-request-id": "D8589D9A78F64EDE", 
-                "date": "Thu, 17 Aug 2017 20:03:03 GMT", 
+                "x-amz-request-id": "6BF2EC5F8C04F563", 
+                "date": "Fri, 18 Aug 2017 14:41:31 GMT", 
                 "content-type": "application/xml"
             }
         }

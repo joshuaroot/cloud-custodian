@@ -271,8 +271,12 @@ class CrossAccountObjectFilter(Filter):
                 obj_owner = c.get('Owner', {}).get('ID', None)
                 if obj_owner != owner_id:
                     bucket.setdefault(
-                        'c7n:cross_account_objects', []).append(
-                        '/'.join(filter(None, [p['Name'], p['Prefix'], c['Key']])))
+                        'c7n:cross_account_objects', []).append({
+                            'Path': '/'.join(filter(
+                                None, [p['Name'], p['Prefix'], c['Key']])),
+                            'OwnerName': c.get(
+                                'Owner', {}).get('DisplayName', ''),
+                            'OwnerID': c.get('Owner', {}).get('ID', '')})
         if 'c7n:cross_account_objects' in bucket:
             return bucket
         return
