@@ -530,8 +530,9 @@ class CrossAccountObjectFilter(Filter):
                   - type: cross-account-objects
     """
     permissions = (
-        's3:ListObjects',
-        's3:GetObject',)
+        's3:ListObjects', 's3:GetObject',
+        's3:GetObjectAcl', 's3:GetBucketAcl')
+    schema = type_schema('cross-account-objects')
 
     def process_objects(self, bucket):
         owner_id = bucket.get('Acl', {}).get('Owner', {}).get('ID', None)
@@ -539,7 +540,6 @@ class CrossAccountObjectFilter(Filter):
             return
         s3 = bucket_client(local_session(self.manager.session_factory), bucket)
         paginator = s3.get_paginator('list_objects')
-        results = []
         for p in paginator.paginate(Bucket=bucket['Name']):
             for c in p.get('Contents', []):
                 obj_owner = c.get('Owner', {}).get('ID', None)
