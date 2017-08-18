@@ -26,8 +26,9 @@ from c7n.filters import (
 import c7n.filters.vpc as net_filters
 from c7n.filters.related import RelatedResourceFilter
 from c7n.filters.revisions import Diff
-from c7n.query import QueryResourceManager
+from c7n.query import QueryResourceManager, ConfigSource, DescribeSource
 from c7n.manager import resources
+from c7n.tags import universal_augment
 from c7n.utils import (
     chunks, local_session, type_schema, get_retry, camelResource, parse_cidr)
 
@@ -46,6 +47,8 @@ class Vpc(QueryResourceManager):
         dimension = None
         config_type = 'AWS::EC2::VPC'
         id_prefix = "vpc-"
+
+    augment = universal_augment
 
 
 @Vpc.filter_registry.register('flow-logs')
@@ -206,6 +209,8 @@ class Subnet(QueryResourceManager):
         config_type = 'AWS::EC2::Subnet'
         id_prefix = "subnet-"
 
+    augment = universal_augment
+
 
 Subnet.filter_registry.register('flow-logs', FlowLogFilter)
 
@@ -225,6 +230,30 @@ class SecurityGroup(QueryResourceManager):
         dimension = None
         config_type = "AWS::EC2::SecurityGroup"
         id_prefix = "sg-"
+
+    def get_source(self, source_type):
+        if source_type == 'config':
+            return ConfigSG(self)
+        elif source_type == 'describe':
+            return DescribeSG(self)
+        return super(SecurityGroup, self).get_source(source_type)
+
+
+class DescribeSG(DescribeSource):
+
+    def augment(self, resources):
+        return universal_augment(self.manager, resources)
+
+
+class ConfigSG(ConfigSource):
+
+    def augment(self, resources):
+        for r in resources:
+            for p in r.get('IpPermissions', ()):
+                p['IpRanges'] = p.pop('Ipv4Ranges')
+            for p in r.get('IpPermissionsEgress', ()):
+                p['IpRanges'] = p.pop('Ipv4Ranges')
+        return resources
 
 
 @SecurityGroup.filter_registry.register('diff')
@@ -1091,6 +1120,8 @@ class RouteTable(QueryResourceManager):
         dimension = None
         id_prefix = "rtb-"
 
+    augment = universal_augment
+
 
 @resources.register('peering-connection')
 class PeeringConnection(QueryResourceManager):
@@ -1107,6 +1138,8 @@ class PeeringConnection(QueryResourceManager):
         dimension = None
         id_prefix = "pcx-"
 
+    augment = universal_augment
+
 
 @resources.register('network-acl')
 class NetworkAcl(QueryResourceManager):
@@ -1122,6 +1155,8 @@ class NetworkAcl(QueryResourceManager):
         dimension = None
         config_type = "AWS::EC2::NetworkAcl"
         id_prefix = "acl-"
+
+    augment = universal_augment
 
 
 @NetworkAcl.filter_registry.register('subnet')
@@ -1233,6 +1268,8 @@ class CustomerGateway(QueryResourceManager):
         dimension = None
         id_prefix = "cgw-"
 
+    augment = universal_augment
+
 
 @resources.register('internet-gateway')
 class InternetGateway(QueryResourceManager):
@@ -1248,6 +1285,8 @@ class InternetGateway(QueryResourceManager):
         date = None
         config_type = "AWS::EC2::InternetGateway"
         id_prefix = "igw-"
+
+    augment = universal_augment
 
 
 @resources.register('vpn-connection')
@@ -1265,6 +1304,8 @@ class VPNConnection(QueryResourceManager):
         config_type = 'AWS::EC2::VPNConnection'
         id_prefix = "vpn-"
 
+    augment = universal_augment
+
 
 @resources.register('vpn-gateway')
 class VPNGateway(QueryResourceManager):
@@ -1280,6 +1321,8 @@ class VPNGateway(QueryResourceManager):
         date = None
         config_type = 'AWS::EC2::VPNGateway'
         id_prefix = "vgw-"
+
+    augment = universal_augment
 
 
 @resources.register('key-pair')
