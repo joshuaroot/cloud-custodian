@@ -758,7 +758,6 @@ class LaunchActivityFilter(Filter):
         return results
 
 
-
 @actions.register('tag-trim')
 class GroupTagTrim(TagTrim):
     """Action to trim the number of tags to avoid hitting tag limits
