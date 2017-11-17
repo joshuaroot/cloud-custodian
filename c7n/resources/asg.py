@@ -727,6 +727,7 @@ class LaunchActivityFilter(Filter):
         client = local_session(
             self.manager.session_factory).client('autoscaling')
         p = client.get_paginator('describe_scaling_activities')
+        expire = False
         for activity in p.paginate(
                 AutoScalingGroupName=asg['AutoScalingGroupName']):
             for a in activity['Activities']:
@@ -735,11 +736,15 @@ class LaunchActivityFilter(Filter):
                     # event that is older that desired
                     if a['StartTime'].replace(tzinfo=tzutc()) < datetime.now(
                             tz=tzutc()) - timedelta(days=self.data.get('days')):
+                        expire = True
                         break
 
                 asg.setdefault('c7n:Status', [])
                 if str(a['StatusCode']) not in asg['c7n:Status']:
                     asg['c7n:Status'].append(str(a['StatusCode']))
+
+            if expire:
+                break
 
     def process(self, asgs, event=None):
         with self.executor_factory(max_workers=2) as w:
