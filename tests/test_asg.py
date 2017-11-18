@@ -16,6 +16,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import boto3
 
 from .common import BaseTest
+from c7n.resources.asg import LaunchActivityFilter
+from c7n.executor import MainThreadExecutor
 
 
 class LaunchConfigTest(BaseTest):
@@ -464,6 +466,7 @@ class AutoScalingTest(BaseTest):
         self.assertEqual(resources[0]['AutoScalingGroupName'], 'ContainersFTW')
 
     def test_asg_activity_filter(self):
+        self.patch(LaunchActivityFilter, 'executor_factory', MainThreadExecutor)
         session = self.replay_flight_data('test_asg_launch_activity_filter')
         p = self.load_policy({
             'name': 'asg-activities',
@@ -480,6 +483,7 @@ class AutoScalingTest(BaseTest):
             ['c7n-asg-launch-failure', 'c7n-asg-launch-success'])
 
     def test_asg_activity_failed_filter(self):
+        self.patch(LaunchActivityFilter, 'executor_factory', MainThreadExecutor)
         session = self.replay_flight_data('test_asg_launch_activity_failure')
         p = self.load_policy({
             'name': 'failed-asg-build',
@@ -493,6 +497,7 @@ class AutoScalingTest(BaseTest):
             resources[0]['AutoScalingGroupName'], 'c7n.asg.failure')
 
     def test_asg_activity_success_filter(self):
+        self.patch(LaunchActivityFilter, 'executor_factory', MainThreadExecutor)
         session = self.replay_flight_data('test_asg_launch_activity_success')
         p = self.load_policy({
             'name': 'success-asg-build',
