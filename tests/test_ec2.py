@@ -476,6 +476,28 @@ class TestTag(BaseTest):
         resources = policy.run()
         self.assertEqual(len(resources), 3)
 
+    def test_ec2_mark_zero(self):
+        session_factory = self.replay_flight_data('test_ec2_mark_zero')
+        session = session_factory(region='us-east-1')
+        policy = self.load_policy({
+            'name': 'ec2-mark-zero-days',
+            'resource': 'ec2',
+            'filters': [{'tag:CreatorName': 'joshuaroot'}],
+            'actions': [{
+                'type': 'mark-for-op',
+                'days': 0,
+                'op': 'terminate'}]
+        }, session_factory=session_factory)
+        resources = policy.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['InstanceId'], 'i-0b93c63b166ae128d')
+        ec2 = session.client('ec2')
+        resource = ec2.describe_instances(
+            InstanceIds=['i-0b93c63b166ae128d'])[
+            'Reservations'][0]['Instances'][0]
+        tag = [t['Key'] for t in resource['Tags'] if t['Key'] == 'maid_status']
+        self.assertEqual(len(tag), 1)
+
 
 class TestStop(BaseTest):
 
