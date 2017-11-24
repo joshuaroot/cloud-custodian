@@ -120,6 +120,10 @@
                             {
                                 "Value": "joshuaroot", 
                                 "Key": "CreatorName"
+                            }, 
+                            {
+                                "Value": "Resource does not meet policy: terminate@2017/11/24", 
+                                "Key": "maid_status"
                             }
                         ], 
                         "AmiLaunchIndex": 0
@@ -133,13 +137,13 @@
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "7f60a41b-b2cb-48e3-a5d0-e19e2acee3be", 
+            "RequestId": "dc03969e-b80f-4a3e-b06c-c704d0a44f45", 
             "HTTPHeaders": {
                 "transfer-encoding": "chunked", 
                 "vary": "Accept-Encoding", 
                 "server": "AmazonEC2", 
                 "content-type": "text/xml;charset=UTF-8", 
-                "date": "Fri, 24 Nov 2017 14:24:12 GMT"
+                "date": "Fri, 24 Nov 2017 14:24:14 GMT"
             }
         }
     }
