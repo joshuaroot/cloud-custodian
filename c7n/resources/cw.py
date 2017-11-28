@@ -125,7 +125,7 @@ class LogGroup(QueryResourceManager):
                     return
                 raise
             tag_list = []
-            for k, v in tags.iteritems():
+            for k, v in tags.items():
                 tag_list.append({'Key': k, 'Value': v})
             r['Tags'] = tag_list
             return r
