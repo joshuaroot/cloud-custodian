@@ -19,19 +19,17 @@ from .common import BaseTest
 class LogGroupTest(BaseTest):
 
     def test_last_write(self):
-        factory = self.replay_flight_data('test_log_group_last_write')
+        factory = self.record_flight_data('test_log_group_last_write')
+        client = factory().client('logs')
         p = self.load_policy(
-            {'name': 'set-retention',
+            {'name': 'stale-log-groups',
              'resource': 'log-group',
              'filters': [
-                 {'logGroupName': '/aws/lambda/ec2-instance-type'},
-                 {'type':'last-write', 'days': 0.1}]
+                 {'type': 'last-write', 'days': 0.01}]
              },
             session_factory=factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
-        self.assertEqual(resources[0]['logGroupName'],
-                         '/aws/lambda/ec2-instance-type')
 
     def test_retention(self):
         log_group = 'c7n-test-a'
@@ -73,3 +71,95 @@ class LogGroupTest(BaseTest):
         self.assertEqual(
             client.describe_log_groups(
                 logGroupNamePrefix=log_group)['logGroups'], [])
+
+    def test_add_tags(self):
+        log_group = 'c7n-tagging-test'
+        session_factory = self.replay_flight_data('test_log_group_tag')
+        session = session_factory(region='us-east-1')
+        client = session.client('logs')
+        client.create_log_group(logGroupName=log_group)
+        self.addCleanup(client.delete_log_group, logGroupName=log_group)
+
+        p = self.load_policy({
+            'name': 'tag-log-group',
+            'resource': 'log-group',
+            'filters': [{'logGroupName': log_group}],
+            'actions': [{
+                'type': 'tag',
+                'key': 'RequiredTag',
+                'value': 'TagValue'}]}, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(
+            client.list_tags_log_group(logGroupName=log_group)['tags'],
+            {'RequiredTag': 'TagValue'})
+
+    def test_remove_tags(self):
+        log_group = 'c7n-remove-tagging-test'
+        session_factory = self.replay_flight_data('test_log_group_remove_tag')
+        session = session_factory(region='us-east-1')
+        client = session.client('logs')
+        client.create_log_group(
+            logGroupName=log_group, tags={'ExpiredTag': 'TagValue'})
+        self.addCleanup(client.delete_log_group, logGroupName=log_group)
+
+        tags = client.list_tags_log_group(logGroupName=log_group)['tags']
+        self.assertEqual(tags, {'ExpiredTag': 'TagValue'})
+
+        p = self.load_policy({
+            'name': 'untag-log-group',
+            'resource': 'log-group',
+            'filters': [{'logGroupName': log_group}],
+            'actions': [{
+                'type': 'remove-tag',
+                'tags': ['ExpiredTag']}]}, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(
+            len(client.list_tags_log_group(logGroupName=log_group)['tags']), 0)
+
+    def test_mark_for_op(self):
+        log_group = 'c7n-mark-for-op-test'
+        session_factory = self.replay_flight_data('test_log_group_mark_for_op')
+        session = session_factory(region='us-east-1')
+        client = session.client('logs')
+        client.create_log_group(logGroupName=log_group)
+        self.addCleanup(client.delete_log_group, logGroupName=log_group)
+
+        p = self.load_policy({
+            'name': 'mark-log-group',
+            'resource': 'log-group',
+            'filters': [{'logGroupName': log_group}],
+            'actions': [{
+                'type': 'mark-for-op',
+                'tag': 'cwl_cleanup',
+                'op': 'delete',
+                'days': 7}]}, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(
+            client.list_tags_log_group(logGroupName=log_group)['tags'],
+            {"cwl_cleanup": "Resource does not meet policy: delete@2017/12/04"})
+
+    def test_marked_for_op(self):
+        log_group = 'c7n-marked-for-op-test'
+        session_factory = self.replay_flight_data(
+            'test_log_group_marked_for_op')
+        session = session_factory(region='us-east-1')
+        client = session.client('logs')
+        client.create_log_group(
+            logGroupName=log_group,
+            tags={"cwl_cleanup":
+                      "Resource does not meet policy: delete@2017/11/27"})
+        self.addCleanup(client.delete_log_group, logGroupName=log_group)
+
+        p = self.load_policy({
+            'name': 'marked-log-group',
+            'resource': 'log-group',
+            'filters': [
+                {'type': 'marked-for-op',
+                 'tag': 'cwl_cleanup',
+                 'op': 'delete'}]}, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['logGroupName'], log_group)

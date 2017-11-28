@@ -1,0 +1,28 @@
+{
+    "status_code": 200, 
+    "data": {
+        "logStreams": [
+            {
+                "firstEventTimestamp": 1511879362013, 
+                "lastEventTimestamp": 1511879362013, 
+                "creationTime": 1511879362005, 
+                "uploadSequenceToken": "49577903130347148316479543192430599241905379300687956738", 
+                "logStreamName": "2017/11/28/[$LATEST]65d9219241ab499bbf1e0f520e630abb", 
+                "lastIngestionTime": 1511879377173, 
+                "arn": "arn:aws:logs:us-east-1:385131497716:log-group:/aws/lambda/GenericFunction2:log-stream:2017/11/28/[$LATEST]65d9219241ab499bbf1e0f520e630abb", 
+                "storedBytes": 0
+            }
+        ], 
+        "ResponseMetadata": {
+            "RetryAttempts": 0, 
+            "HTTPStatusCode": 200, 
+            "RequestId": "c94fe73b-d448-11e7-a6ed-ab128b15429a", 
+            "HTTPHeaders": {
+                "x-amzn-requestid": "c94fe73b-d448-11e7-a6ed-ab128b15429a", 
+                "date": "Tue, 28 Nov 2017 14:31:13 GMT", 
+                "content-length": "467", 
+                "content-type": "application/x-amz-json-1.1"
+            }
+        }
+    }
+}

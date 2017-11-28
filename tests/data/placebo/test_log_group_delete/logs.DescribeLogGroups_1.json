@@ -2,33 +2,20 @@
     "status_code": 200, 
     "data": {
         "ResponseMetadata": {
+            "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "ec53a2a1-612f-11e6-adba-4b16b071e1f8", 
+            "RequestId": "b9709035-d391-11e7-a187-ade6106fe37a", 
             "HTTPHeaders": {
-                "x-amzn-requestid": "ec53a2a1-612f-11e6-adba-4b16b071e1f8", 
-                "date": "Sat, 13 Aug 2016 08:28:33 GMT", 
-                "content-length": "590", 
+                "x-amzn-requestid": "b9709035-d391-11e7-a187-ade6106fe37a", 
+                "date": "Mon, 27 Nov 2017 16:40:48 GMT", 
+                "content-length": "179", 
                 "content-type": "application/x-amz-json-1.1"
             }
         }, 
         "logGroups": [
             {
-                "arn": "arn:aws:logs:us-west-2:644160558196:log-group:/aws/lambda/ec2-instance-type:*", 
-                "creationTime": 1470652575943, 
-                "metricFilterCount": 0, 
-                "logGroupName": "/aws/lambda/ec2-instance-type", 
-                "storedBytes": 32987
-            }, 
-            {
-                "arn": "arn:aws:logs:us-west-2:644160558196:log-group:/aws/lambda/process_resources:*", 
-                "creationTime": 1466943945968, 
-                "metricFilterCount": 0, 
-                "logGroupName": "/aws/lambda/process_resources", 
-                "storedBytes": 4904
-            }, 
-            {
-                "arn": "arn:aws:logs:us-west-2:644160558196:log-group:c7n-test-b:*", 
-                "creationTime": 1471076912874, 
+                "arn": "arn:aws:logs:us-east-1:385131497716:log-group:c7n-test-b:*", 
+                "creationTime": 1511800848772, 
                 "metricFilterCount": 0, 
                 "logGroupName": "c7n-test-b", 
                 "storedBytes": 0

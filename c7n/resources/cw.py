@@ -14,12 +14,18 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from datetime import datetime, timedelta
+from botocore.exceptions import ClientError
 
 from c7n.actions import BaseAction
-from c7n.filters import Filter
+from c7n.filters import Filter, FilterRegistry
 from c7n.query import QueryResourceManager
 from c7n.manager import resources
 from c7n.utils import type_schema, local_session, chunks, get_retry
+from c7n.tags import Tag, RemoveTag, TagActionFilter, TagDelayedAction
+
+
+filters = FilterRegistry('log-group.filters')
+filters.register('marked-for-op', TagActionFilter)
 
 
 @resources.register('alarm')
@@ -103,6 +109,33 @@ class LogGroup(QueryResourceManager):
         dimension = 'LogGroupName'
         date = 'creationTime'
 
+    permissions = ('logs:ListTagsLogGroup',)
+
+    def augment(self, resources):
+        def _augment(r):
+            client = local_session(self.session_factory).client('logs')
+            try:
+                tags = client.list_tags_log_group(
+                    logGroupName=r['logGroupName'])['tags']
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'AccessDeniedException':
+                    self.log.warning(
+                        "Access denied getting tags for log group:%s",
+                        r['logGroupName'])
+                    return
+                raise
+            tag_list = []
+            for k, v in tags.iteritems():
+                tag_list.append({'Key': k, 'Value': v})
+            r['Tags'] = tag_list
+            return r
+
+        self.log.debug('collecting tags for %d log groups' % len(resources))
+        with self.executor_factory(max_workers=4) as w:
+            return list(filter(None, w.map(_augment, resources)))
+
+    filter_registry = filters
+
 
 @LogGroup.action_registry.register('retention')
 class Retention(BaseAction):
@@ -157,6 +190,119 @@ class Delete(BaseAction):
         client = local_session(self.manager.session_factory).client('logs')
         for r in resources:
             client.delete_log_group(logGroupName=r['logGroupName'])
+
+
+@LogGroup.action_registry.register('mark-for-op')
+class MarkForOpLogGroup(TagDelayedAction):
+    """Action to specify an action to occur at a later date
+
+    :example:
+
+        .. code-block: yaml
+
+            policies:
+              - name: loggroup-delete-expired
+                resource: log-group
+                filters:
+                  - type: value
+                    value_type: age
+                    key: creationTime
+                    days: 200
+                actions:
+                  - type: mark-for-op
+                    tag: loggroup_cleanup
+                    msg: "Expired Log Group"
+                    op: delete
+                    days: 7
+    """
+
+    permissions = ('logs:TagLogGroup',)
+
+    def process_resource_set(self, loggroups, tags):
+        client = local_session(self.manager.session_factory).client(
+            'logs')
+        tag_dict = {}
+        for t in tags:
+            tag_dict[t['Key']] = t['Value']
+        for lg in loggroups:
+            try:
+                client.tag_log_group(
+                    logGroupName=lg['logGroupName'], tags=tag_dict)
+            except Exception as e:
+                self.log.exception(
+                    'Exception tagging log group %s: %s',
+                    lg['logGroupName'], e)
+                continue
+
+
+@LogGroup.action_registry.register('tag')
+class TagLogGroup(Tag):
+    """Action to create tag(s) on a log group
+
+    :example:
+
+        .. code-block: yaml
+
+            policies:
+              - name: tag-log-group
+                resource: log-group
+                filters:
+                  - "tag:Required-Tag": absent
+                actions:
+                  - type: tag
+                    key: Required-Tag
+                    value: Tag-Value
+    """
+
+    permissions = ('logs:TagLogGroup',)
+
+    def process_resource_set(self, loggroups, tags):
+        client = local_session(self.manager.session_factory).client('logs')
+        tag_dict = {}
+        for t in tags:
+            tag_dict[t['Key']] = t['Value']
+        for lg in loggroups:
+            try:
+                client.tag_log_group(
+                    logGroupName=lg['logGroupName'], tags=tag_dict)
+            except Exception as e:
+                self.log.exception(
+                    'Exception tagging queue %s: %s',
+                    lg['logGroupName'], e)
+                continue
+
+
+@LogGroup.action_registry.register('remove-tag')
+class UntagLogGroup(RemoveTag):
+    """Action to remove tag(s) on a log group
+
+    :example:
+
+        .. code-block: yaml
+
+            policies:
+              - name: log-group-remove-tags
+                resource: log-group
+                filters:
+                  - "tag:ExpiredTag": present
+                actions:
+                  - type: remove-tag
+                    tags: ["ExpiredTag"]
+    """
+
+    permissions = ('logs:UntagLogGroup',)
+
+    def process_resource_set(self, loggroups, tags):
+        client = local_session(self.manager.session_factory).client('logs')
+        for lg in loggroups:
+            try:
+                client.untag_log_group(
+                    logGroupName=lg['logGroupName'], tags=tags)
+            except Exception as e:
+                self.log.exception(
+                    'Exception while removing tags from log group %s: %s',
+                    lg['logGroupName'], e)
+                continue
 
 
 @LogGroup.filter_registry.register('last-write')
