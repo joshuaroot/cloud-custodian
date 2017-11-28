@@ -15,21 +15,25 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from .common import BaseTest
 
+from c7n.resources import cw
+from c7n.executor import MainThreadExecutor
+
 
 class LogGroupTest(BaseTest):
 
     def test_last_write(self):
-        factory = self.record_flight_data('test_log_group_last_write')
-        client = factory().client('logs')
+        self.patch(cw.LastWriteDays, 'executor_factory', MainThreadExecutor)
+        factory = self.replay_flight_data('test_log_group_last_write')
         p = self.load_policy(
             {'name': 'stale-log-groups',
              'resource': 'log-group',
              'filters': [
-                 {'type': 'last-write', 'days': 0.01}]
+                 {'type': 'last-write', 'days': 365}]
              },
             session_factory=factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['logGroupName'], 'obsolete')
 
     def test_retention(self):
         log_group = 'c7n-test-a'
