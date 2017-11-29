@@ -4,16 +4,14 @@
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "68c0506c-d38e-11e7-9e97-6768191be15c", 
+            "RequestId": "0df63bc8-d4a6-11e7-ac15-ad890d7532c2", 
             "HTTPHeaders": {
-                "x-amzn-requestid": "68c0506c-d38e-11e7-9e97-6768191be15c", 
-                "date": "Mon, 27 Nov 2017 16:17:05 GMT", 
-                "content-length": "34", 
+                "x-amzn-requestid": "0df63bc8-d4a6-11e7-ac15-ad890d7532c2", 
+                "date": "Wed, 29 Nov 2017 01:38:51 GMT", 
+                "content-length": "11", 
                 "content-type": "application/x-amz-json-1.1"
             }
         }, 
-        "tags": {
-            "ExpiredTag": "TagValue"
-        }
+        "tags": {}
     }
 }

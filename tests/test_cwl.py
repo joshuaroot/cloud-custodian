@@ -15,14 +15,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from .common import BaseTest
 
-from c7n.resources import cw
-from c7n.executor import MainThreadExecutor
-
 
 class LogGroupTest(BaseTest):
 
     def test_last_write(self):
-        self.patch(cw.LastWriteDays, 'executor_factory', MainThreadExecutor)
         factory = self.replay_flight_data('test_log_group_last_write')
         p = self.load_policy(
             {'name': 'stale-log-groups',
@@ -121,49 +117,3 @@ class LogGroupTest(BaseTest):
         self.assertEqual(len(resources), 1)
         self.assertEqual(
             len(client.list_tags_log_group(logGroupName=log_group)['tags']), 0)
-
-    def test_mark_for_op(self):
-        log_group = 'c7n-mark-for-op-test'
-        session_factory = self.replay_flight_data('test_log_group_mark_for_op')
-        session = session_factory(region='us-east-1')
-        client = session.client('logs')
-        client.create_log_group(logGroupName=log_group)
-        self.addCleanup(client.delete_log_group, logGroupName=log_group)
-
-        p = self.load_policy({
-            'name': 'mark-log-group',
-            'resource': 'log-group',
-            'filters': [{'logGroupName': log_group}],
-            'actions': [{
-                'type': 'mark-for-op',
-                'tag': 'cwl_cleanup',
-                'op': 'delete',
-                'days': 7}]}, session_factory=session_factory)
-        resources = p.run()
-        self.assertEqual(len(resources), 1)
-        self.assertEqual(
-            client.list_tags_log_group(logGroupName=log_group)['tags'],
-            {"cwl_cleanup": "Resource does not meet policy: delete@2017/12/04"})
-
-    def test_marked_for_op(self):
-        log_group = 'c7n-marked-for-op-test'
-        session_factory = self.replay_flight_data(
-            'test_log_group_marked_for_op')
-        session = session_factory(region='us-east-1')
-        client = session.client('logs')
-        client.create_log_group(
-            logGroupName=log_group,
-            tags={"cwl_cleanup":
-                      "Resource does not meet policy: delete@2017/11/27"})
-        self.addCleanup(client.delete_log_group, logGroupName=log_group)
-
-        p = self.load_policy({
-            'name': 'marked-log-group',
-            'resource': 'log-group',
-            'filters': [
-                {'type': 'marked-for-op',
-                 'tag': 'cwl_cleanup',
-                 'op': 'delete'}]}, session_factory=session_factory)
-        resources = p.run()
-        self.assertEqual(len(resources), 1)
-        self.assertEqual(resources[0]['logGroupName'], log_group)
