@@ -14,10 +14,9 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from datetime import datetime, timedelta
-from botocore.exceptions import ClientError
 
 from c7n.actions import BaseAction
-from c7n.filters import Filter, FilterRegistry
+from c7n.filters import Filter
 from c7n.query import QueryResourceManager
 from c7n.manager import resources
 from c7n.utils import type_schema, local_session, chunks, get_retry
