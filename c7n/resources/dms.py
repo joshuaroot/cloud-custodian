@@ -20,6 +20,12 @@ from c7n.manager import resources
 from c7n.query import QueryResourceManager, DescribeSource
 from c7n.utils import local_session, chunks, type_schema
 from c7n.filters.vpc import SecurityGroupFilter, SubnetFilter
+from c7n.filters import FilterRegistry
+from c7n.tags import RemoveTag, Tag, TagActionFilter, TagDelayedAction
+
+
+filters = FilterRegistry('dms.filters')
+filters.register('marked-for-op', TagActionFilter)
 
 
 @resources.register('dms-instance')
@@ -36,6 +42,7 @@ class ReplicationInstance(QueryResourceManager):
 
         # The api supports filtering which we handle via describe source.
         filter_name = filter_type = None
+    filter_registry = filters
 
     def get_source(self, source_type):
         if source_type == 'describe':
@@ -44,6 +51,13 @@ class ReplicationInstance(QueryResourceManager):
 
     def get_arns(self, resources):
         return [r['ReplicationInstanceArn'] for r in resources]
+
+    def get_tags(self, resources):
+        client = local_session(self.session_factory).client('dms')
+        for r in resources:
+            r['Tags'] = client.list_tags_for_resource(
+                ResourceArn=r['ReplicationInstanceArn'])['TagList']
+        return resources
 
 
 class InstanceDescribe(DescribeSource):
@@ -105,3 +119,114 @@ class InstanceDelete(BaseAction):
         client = local_session(self.manager.session_factory).client('dms')
         for arn, r in zip(self.manager.get_arns(resources), resources):
             client.delete_replication_instance(ReplicationInstanceArn=arn)
+
+
+@ReplicationInstance.action_registry.register('tag')
+class InstanceTag(Tag):
+    """
+    Add tag(s) to a replication instance
+
+    :example:
+
+        .. code-block:: yaml
+
+            policies:
+                - name: tag-dms-required
+                  resource: dms-instance
+                  filters:
+                    - "tag:RequireTag": absent
+                  actions:
+                    - type: tag
+                      key: RequiredTag
+                      value: RequiredTagValue
+    """
+    permissions = ('dms:AddTagsToResource',)
+
+    def process_resource_set(self, resources, tags):
+        client = local_session(self.manager.session_factory).client('dms')
+        tags_list = []
+        for t in tags:
+            tags_list.append({'Key': t['Key'], 'Value': t['Value']})
+        for r in resources:
+            try:
+                client.add_tags_to_resource(
+                    ResourceArn=r['ReplicationInstanceArn'],
+                    Tags=tags_list)
+            except Exception as e:
+                self.log.exception(
+                    'Exception while adding tags to %s: %s',
+                    r['ReplicationInstanceIdentifier'], e)
+                continue
+
+
+@ReplicationInstance.action_registry.register('remove-tag')
+class InstanceRemoveTag(RemoveTag):
+    """
+    Remove tag(s) from a replication instance
+
+    :example:
+
+        .. code-block:: yaml
+
+            policies:
+                - name: delete-single-az-dms
+                  resource: dms-instance
+                  filters:
+                    - "tag:InvalidTag": present
+                  actions:
+                    - type: remove-tag
+                      tags: ["InvalidTag"]
+    """
+    permissions = ('dms:RemoveTagsFromResource',)
+
+    def process_resource_set(self, resources, tags):
+        client = local_session(self.manager.session_factory).client('dms')
+        for r in resources:
+            try:
+                client.remove_tags_from_resource(
+                    ResourceArn=r['ReplicationInstanceArn'],
+                    TagKeys=tags)
+            except Exception as e:
+                self.log.exception(
+                    'Exception while removing tags from %s: %s',
+                    r['ReplicationInstanceIdentifier'], e)
+                continue
+
+
+@ReplicationInstance.action_registry.register('mark-for-op')
+class InstanceMarkForOp(TagDelayedAction):
+    """
+    Tag a replication instance for action at a later time
+
+    :example:
+
+        .. code-block:: yaml
+
+            policies:
+                - name: delete-single-az-dms
+                  resource: dms-instance
+                  filters:
+                    - MultiAZ: False
+                  actions:
+                    - type: mark-for-op
+                      tag: custodian_dms_cleanup
+                      op: delete
+                      days: 7
+    """
+    permissions = ('dms:AddTagsToResource',)
+
+    def process_resource_set(self, resources, tags):
+        client = local_session(self.manager.session_factory).client('dms')
+        tags_list = []
+        for t in tags:
+            tags_list.append({'Key': t['Key'], 'Value': t['Value']})
+        for r in resources:
+            try:
+                client.add_tags_to_resource(
+                    ResourceArn=r['ReplicationInstanceArn'],
+                    Tags=tags_list)
+            except Exception as e:
+                self.log.exception(
+                    'Exception while adding op tag to %s: %s',
+                    r['ReplicationInstanceIdentifier'], e)
+                continue
