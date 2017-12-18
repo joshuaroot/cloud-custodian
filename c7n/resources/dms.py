@@ -18,7 +18,7 @@ from concurrent.futures import as_completed
 from c7n.actions import BaseAction
 from c7n.manager import resources
 from c7n.query import QueryResourceManager, DescribeSource
-from c7n.utils import local_session, chunks, type_schema
+from c7n.utils import local_session, chunks, type_schema, get_retry
 from c7n.filters.vpc import SecurityGroupFilter, SubnetFilter
 from c7n.filters import FilterRegistry
 from c7n.tags import RemoveTag, Tag, TagActionFilter, TagDelayedAction
@@ -43,6 +43,7 @@ class ReplicationInstance(QueryResourceManager):
         # The api supports filtering which we handle via describe source.
         filter_name = filter_type = None
     filter_registry = filters
+    retry = staticmethod(get_retry(('Throttled',)))
 
     def get_source(self, source_type):
         if source_type == 'describe':
@@ -55,8 +56,9 @@ class ReplicationInstance(QueryResourceManager):
     def get_tags(self, resources):
         client = local_session(self.session_factory).client('dms')
         for r in resources:
-            r['Tags'] = client.list_tags_for_resource(
-                ResourceArn=r['ReplicationInstanceArn'])['TagList']
+            r['Tags'] = self.manager.retry(
+                client.list_tags_for_resource(
+                    ResourceArn=r['ReplicationInstanceArn'])['TagList'])
         return resources
 
 
