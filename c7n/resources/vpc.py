@@ -191,6 +191,34 @@ class SecurityGroupFilter(RelatedResourceFilter):
         return vpc_group_ids
 
 
+@Vpc.filter_registry.register('vpc-attributes')
+class AttributesFilter(Filter):
+    """Filters VPCs based on their DNS attributes"""
+    schema = type_schema(
+        'vpc-attributes',
+        EnableDnsHostnames={'type': 'boolean'},
+        EnableDnsSupport={'type': 'boolean'})
+    permissions = ('ec2:DescribeVpcAttributes',)
+
+    def process(self, resources, event=None):
+        results = []
+        client = local_session(self.manager.session_factory).client('ec2')
+
+        for r in resources:
+            hostname = client.describe_vpc_attribute(
+                VpcId=r['VpcId'],
+                Attribute='enableDnsHostnames')['EnableDnsHostnames']['Value']
+            support = client.describe_vpc_attribute(
+                VpcId=r['VpcId'],
+                Attribute='enableDnsSupport')['EnableDnsSupport']['Value']
+
+            if self.data.get(
+                    'EnableDnsHostnames', False) == hostname and self.data.get(
+                    'EnableDnsSupport', False) == support:
+                results.append(r)
+        return results
+
+
 @resources.register('subnet')
 class Subnet(query.QueryResourceManager):
 
