@@ -193,29 +193,51 @@ class SecurityGroupFilter(RelatedResourceFilter):
 
 @Vpc.filter_registry.register('vpc-attributes')
 class AttributesFilter(Filter):
-    """Filters VPCs based on their DNS attributes"""
+    """Filters VPCs based on their DNS attributes
+
+    :example:
+
+    .. code-block:: yaml
+
+            policies:
+              - name: dns-hostname-disabled
+                resource: vpc
+                filters:
+                  - type: vpc-attributes
+                    enablednshostnames: True
+    """
     schema = type_schema(
         'vpc-attributes',
-        EnableDnsHostnames={'type': 'boolean'},
-        EnableDnsSupport={'type': 'boolean'})
+        enablednshostnames={'type': 'boolean'},
+        enablednssupport={'type': 'boolean'})
     permissions = ('ec2:DescribeVpcAttributes',)
 
     def process(self, resources, event=None):
         results = []
         client = local_session(self.manager.session_factory).client('ec2')
+        dns_hostname = self.data.get('enablednshostnames', None)
+        dns_support = self.data.get('enablednssupport', None)
 
         for r in resources:
-            hostname = client.describe_vpc_attribute(
-                VpcId=r['VpcId'],
-                Attribute='enableDnsHostnames')['EnableDnsHostnames']['Value']
-            support = client.describe_vpc_attribute(
-                VpcId=r['VpcId'],
-                Attribute='enableDnsSupport')['EnableDnsSupport']['Value']
-
-            if self.data.get(
-                    'EnableDnsHostnames', False) == hostname and self.data.get(
-                    'EnableDnsSupport', False) == support:
-                results.append(r)
+            if dns_hostname is not None:
+                hostname = client.describe_vpc_attribute(
+                    VpcId=r['VpcId'],
+                    Attribute='enableDnsHostnames'
+                )['EnableDnsHostnames']['Value']
+            if dns_support is not None:
+                support = client.describe_vpc_attribute(
+                    VpcId=r['VpcId'],
+                    Attribute='enableDnsSupport'
+                )['EnableDnsSupport']['Value']
+            if dns_hostname is not None and dns_support is not None:
+                if dns_hostname == hostname and dns_support == support:
+                    results.append(r)
+            elif dns_hostname is not None and dns_support is None:
+                if dns_hostname == hostname:
+                    results.append(r)
+            elif dns_support is not None and dns_hostname is None:
+                if dns_support == support:
+                    results.append(r)
         return results
 
 
