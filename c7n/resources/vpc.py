@@ -200,23 +200,23 @@ class AttributesFilter(Filter):
     .. code-block:: yaml
 
             policies:
-              - name: dns-hostname-disabled
+              - name: dns-hostname-enabled
                 resource: vpc
                 filters:
                   - type: vpc-attributes
-                    enablednshostnames: True
+                    dnshostnames: True
     """
     schema = type_schema(
         'vpc-attributes',
-        enablednshostnames={'type': 'boolean'},
-        enablednssupport={'type': 'boolean'})
+        dnshostnames={'type': 'boolean'},
+        dnssupport={'type': 'boolean'})
     permissions = ('ec2:DescribeVpcAttributes',)
 
     def process(self, resources, event=None):
         results = []
         client = local_session(self.manager.session_factory).client('ec2')
-        dns_hostname = self.data.get('enablednshostnames', None)
-        dns_support = self.data.get('enablednssupport', None)
+        dns_hostname = self.data.get('dnshostnames', None)
+        dns_support = self.data.get('dnssupport', None)
 
         for r in resources:
             if dns_hostname is not None:
@@ -229,6 +229,7 @@ class AttributesFilter(Filter):
                     VpcId=r['VpcId'],
                     Attribute='enableDnsSupport'
                 )['EnableDnsSupport']['Value']
+
             if dns_hostname is not None and dns_support is not None:
                 if dns_hostname == hostname and dns_support == support:
                     results.append(r)
