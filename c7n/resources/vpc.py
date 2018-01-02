@@ -229,7 +229,6 @@ class AttributesFilter(Filter):
                     VpcId=r['VpcId'],
                     Attribute='enableDnsSupport'
                 )['EnableDnsSupport']['Value']
-
             if dns_hostname is not None and dns_support is not None:
                 if dns_hostname == hostname and dns_support == support:
                     results.append(r)
