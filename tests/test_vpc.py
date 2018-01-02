@@ -142,8 +142,8 @@ class VpcTest(BaseTest):
             'resource': 'vpc',
             'filters': [{
                 'type': 'vpc-attributes',
-                'enablednshostnames': True,
-                'enablednssupport': True
+                'dnshostnames': True,
+                'dnssupport': True
             }]
         }, session_factory=self.session_factory)
         resources = p.run()
@@ -154,11 +154,11 @@ class VpcTest(BaseTest):
         self.session_factory = self.replay_flight_data(
             'test_vpc_attributes_hostnames')
         p = self.load_policy({
-            'name': 'dns-hostnames-disabled',
+            'name': 'dns-hostnames-enabled',
             'resource': 'vpc',
             'filters': [{
                 'type': 'vpc-attributes',
-                'enablednshostnames': True
+                'dnshostnames': True
             }]
         }, session_factory=self.session_factory)
         resources = p.run()
