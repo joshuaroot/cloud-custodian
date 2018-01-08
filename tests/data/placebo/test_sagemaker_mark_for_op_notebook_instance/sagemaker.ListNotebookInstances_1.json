@@ -3,29 +3,56 @@
     "data": {
         "NotebookInstances": [
             {
+                "NotebookInstanceStatus": "Stopped", 
+                "Url": "c7n-test-2.notebook.us-east-1.sagemaker.aws", 
+                "NotebookInstanceName": "c7n-test-2", 
+                "CreationTime": {
+                    "hour": 15, 
+                    "__class__": "datetime", 
+                    "month": 1, 
+                    "second": 26, 
+                    "microsecond": 151000, 
+                    "year": 2018, 
+                    "day": 8, 
+                    "minute": 46
+                }, 
+                "NotebookInstanceArn": "arn:aws:sagemaker:us-east-1:644160558196:notebook-instance/c7n-test-2", 
+                "LastModifiedTime": {
+                    "hour": 16, 
+                    "__class__": "datetime", 
+                    "month": 1, 
+                    "second": 18, 
+                    "microsecond": 395000, 
+                    "year": 2018, 
+                    "day": 8, 
+                    "minute": 7
+                }, 
+                "InstanceType": "ml.t2.medium"
+            }, 
+            {
                 "NotebookInstanceStatus": "InService", 
                 "Url": "c7n-test.notebook.us-east-1.sagemaker.aws", 
                 "NotebookInstanceName": "c7n-test", 
                 "CreationTime": {
-                    "hour": 12, 
+                    "hour": 15, 
                     "__class__": "datetime", 
                     "month": 1, 
-                    "second": 28, 
-                    "microsecond": 363000, 
+                    "second": 35, 
+                    "microsecond": 498000, 
                     "year": 2018, 
                     "day": 8, 
-                    "minute": 24
+                    "minute": 25
                 }, 
                 "NotebookInstanceArn": "arn:aws:sagemaker:us-east-1:644160558196:notebook-instance/c7n-test", 
                 "LastModifiedTime": {
-                    "hour": 12, 
+                    "hour": 16, 
                     "__class__": "datetime", 
                     "month": 1, 
-                    "second": 30, 
-                    "microsecond": 578000, 
+                    "second": 47, 
+                    "microsecond": 81000, 
                     "year": 2018, 
                     "day": 8, 
-                    "minute": 29
+                    "minute": 10
                 }, 
                 "InstanceType": "ml.t2.medium"
             }
@@ -33,11 +60,11 @@
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "7dff03d4-c1f6-4af8-a56b-41b9dc625536", 
+            "RequestId": "b8e62457-a27a-4fde-9f20-b5ca2cd5a3eb", 
             "HTTPHeaders": {
-                "date": "Mon, 08 Jan 2018 18:46:18 GMT", 
-                "x-amzn-requestid": "7dff03d4-c1f6-4af8-a56b-41b9dc625536", 
-                "content-length": "336", 
+                "date": "Mon, 08 Jan 2018 21:14:51 GMT", 
+                "x-amzn-requestid": "b8e62457-a27a-4fde-9f20-b5ca2cd5a3eb", 
+                "content-length": "653", 
                 "content-type": "application/x-amz-json-1.1", 
                 "connection": "keep-alive"
             }

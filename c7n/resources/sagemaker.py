@@ -22,6 +22,7 @@ from c7n.utils import local_session, type_schema
 from c7n.actions import BaseAction
 from c7n.tags import RemoveTag, Tag, TagActionFilter, TagDelayedAction
 
+
 filters = FilterRegistry('sagemaker.filters')
 filters.register('marked-for-op', TagActionFilter)
 
@@ -45,7 +46,7 @@ class NotebookInstance(QueryResourceManager):
     permissions = ('sagemaker:ListTags',)
 
     def augment(self, resources):
-        def _tags(r):
+        def _augment(r):
             client = local_session(self.session_factory).client('sagemaker')
             tags = client.list_tags(
                 ResourceArn=r['NotebookInstanceArn'])['Tags']
@@ -53,7 +54,20 @@ class NotebookInstance(QueryResourceManager):
             return r
 
         with self.executor_factory(max_workers=2) as w:
-            return list(filter(None, w.map(_tags, resources)))
+            return list(filter(None, w.map(_augment, resources)))
+
+
+class StateTransitionFilter(object):
+    valid_origin_states = ()
+
+    def filter_instance_state(self, instances, states=None):
+        states = states or self.valid_origin_states
+        orig_length = len(instances)
+        results = [i for i in instances
+                   if i['NotebookInstanceStatus'] in states]
+        self.log.info("%s %d of %d notebook instances" % (
+            self.__class__.__name__, len(results), orig_length))
+        return results
 
 
 @NotebookInstance.action_registry.register('tag')
@@ -98,7 +112,7 @@ class TagNotebookInstance(Tag):
 @NotebookInstance.action_registry.register('remove-tag')
 class RemoveTagNotebookInstance(RemoveTag):
     """Remove tag(s) from notebook-instance(s)
-    
+
     :example:
 
     .. code-block:: yaml
@@ -132,20 +146,20 @@ class RemoveTagNotebookInstance(RemoveTag):
 @NotebookInstance.action_registry.register('mark-for-op')
 class MarkNotebookInstanceForOp(TagDelayedAction):
     """Mark notebook instance for deferred action
-    
+
     :example:
-    
+
     .. code-block:: yaml
 
         policies:
-          - name: notebook-instance-invalid-tag-delete
+          - name: notebook-instance-invalid-tag-stop
             resource: notebook-instance
             filters:
               - "tag:InvalidTag": present
             actions:
               - type: mark-for-op
                 op: stop
-                days: 7
+                days: 1
     """
     permissions = ('sagemaker:AddTags',)
 
@@ -168,25 +182,63 @@ class MarkNotebookInstanceForOp(TagDelayedAction):
                     r['NotebookInstanceName'], e)
 
 
-@NotebookInstance.action_registry.register('stop')
-class StopNotebookInstance(BaseAction):
-    """Stop notebook-instance(s)
-    
+@NotebookInstance.action_registry.register('start')
+class StartNotebookInstance(BaseAction, StateTransitionFilter):
+    """Start notebook-instance(s)
+
     :example:
-    
+
     .. code-block: yaml
-    
+
+        policies:
+          - name: start-notebook-instance
+            resource: notebook-instance
+            actions:
+              - start
+    """
+    schema = type_schema('start')
+    permissions = ('sagemaker:StartNotebookInstance',)
+    valid_origin_states = ('Stopped',)
+
+    def process_instance(self, resource):
+        client = local_session(
+            self.manager.session_factory).client('sagemaker')
+        try:
+            client.start_notebook_instance(
+                NotebookInstanceName=resource['NotebookInstanceName'])
+        except ClientError as e:
+            self.log.exception(
+                "Exception stopping notebook instance %s:\n %s" % (
+                    resource['NotebookInstanceName'], e))
+
+    def process(self, resources):
+        resources = self.filter_instance_state(resources)
+        if not len(resources):
+            return
+
+        with self.executor_factory(max_workers=2) as w:
+                list(w.map(self.process_instance, resources))
+
+
+@NotebookInstance.action_registry.register('stop')
+class StopNotebookInstance(BaseAction, StateTransitionFilter):
+    """Stop notebook-instance(s)
+
+    :example:
+
+    .. code-block: yaml
+
         policies:
           - name: stop-notebook-instance
             resource: notebook-instance
             filters:
               - "tag:DeleteMe": present
-              - NotebookInstanceStatus: InService
             actions:
               - stop
     """
     schema = type_schema('stop')
     permissions = ('sagemaker:StopNotebookInstance',)
+    valid_origin_states = ('InService',)
 
     def process_instance(self, resource):
         client = local_session(
@@ -200,29 +252,33 @@ class StopNotebookInstance(BaseAction):
                     resource['NotebookInstanceName'], e))
 
     def process(self, resources):
+        resources = self.filter_instance_state(resources)
+        if not len(resources):
+            return
+
         with self.executor_factory(max_workers=2) as w:
-            list(w.map(self.process_instance, resources))
+                list(w.map(self.process_instance, resources))
 
 
 @NotebookInstance.action_registry.register('delete')
-class DeleteNotebookInstance(BaseAction):
+class DeleteNotebookInstance(BaseAction, StateTransitionFilter):
     """Deletes notebook-instance(s)
 
     :example:
 
     .. code-block: yaml
-    
+
         policies:
           - name: delete-notebook-instance
             resource: notebook-instance
             filters:
               - "tag:DeleteMe": present
-              - NotebookInstanceStatus: Stopped
             actions:
               - delete
     """
     schema = type_schema('delete')
     permissions = ('sagemaker:DeleteNotebookInstance',)
+    valid_origin_states = ('Stopped', 'Failed',)
 
     def process_instance(self, resource):
         client = local_session(
@@ -236,5 +292,9 @@ class DeleteNotebookInstance(BaseAction):
                     resource['NotebookInstanceName'], e))
 
     def process(self, resources):
+        resources = self.filter_instance_state(resources)
+        if not len(resources):
+            return
+
         with self.executor_factory(max_workers=2) as w:
             list(w.map(self.process_instance, resources))

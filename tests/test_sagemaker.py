@@ -13,10 +13,7 @@
 # limitations under the License.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from datetime import datetime
-from dateutil import tz, zoneinfo
-
-from .common import BaseTest, functional
+from .common import BaseTest
 
 
 class TestNotebookInstance(BaseTest):
@@ -79,12 +76,13 @@ class TestNotebookInstance(BaseTest):
             'resource': 'notebook-instance',
             'filters': [
                 {'tag:Category': 'absent'},
-                {'tag:custodian_cleanup': 'absent'}],
+                {'tag:custodian_cleanup': 'absent'},
+                {'NotebookInstanceStatus': 'InService'}],
             'actions': [{
                 'type': 'mark-for-op',
                 'tag': 'custodian_cleanup',
-                'op': 'delete',
-                'days': 7}]}, session_factory=session_factory)
+                'op': 'stop',
+                'days': 1}]}, session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
         client = session_factory().client('sagemaker')
@@ -101,20 +99,34 @@ class TestNotebookInstance(BaseTest):
             'filters': [{
                 'type': 'marked-for-op',
                 'tag': 'custodian_cleanup',
-                'op': 'delete',
-                'skew': 7}]}, session_factory=session_factory)
+                'op': 'stop',
+                'skew': 1}]}, session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
+
+    def test_start_notebook_instance(self):
+        session_factory = self.replay_flight_data(
+            'test_sagemaker_start_notebook_instance')
+        p = self.load_policy({
+            'name': 'start-notebook-instance',
+            'resource': 'notebook-instance',
+            'actions': [{'type': 'start'}]}, session_factory=session_factory)
+        resources = p.run()
+        self.assertTrue(len(resources), 1)
+
+        client = session_factory().client('sagemaker')
+        notebook = client.describe_notebook_instance(
+            NotebookInstanceName=resources[0]['NotebookInstanceName'])
+        self.assertTrue(notebook['NotebookInstanceStatus'], 'Pending')
 
     def test_stop_notebook_instance(self):
         session_factory = self.replay_flight_data(
             'test_sagemaker_stop_notebook_instance')
         p = self.load_policy({
-            'name': 'delete-invalid-notebook-instance',
+            'name': 'stop-invalid-notebook-instance',
             'resource': 'notebook-instance',
             'filters': [
-                {'tag:Category': 'absent'},
-                {'NotebookInstanceStatus': 'InService'}],
+                {'tag:Category': 'absent'}],
             'actions': [{'type': 'stop'}]}, session_factory=session_factory)
         resources = p.run()
         self.assertTrue(len(resources), 1)
@@ -131,8 +143,7 @@ class TestNotebookInstance(BaseTest):
             'name': 'delete-invalid-notebook-instance',
             'resource': 'notebook-instance',
             'filters': [
-                {'tag:Category': 'absent'},
-                {'NotebookInstanceStatus': 'Stopped'}],
+                {'tag:DeleteMe': 'present'}],
             'actions': [{'type': 'delete'}]}, session_factory=session_factory)
         resources = p.run()
         self.assertTrue(len(resources), 1)
