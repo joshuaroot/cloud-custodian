@@ -58,6 +58,13 @@ class NotebookInstance(QueryResourceManager):
 
 
 class StateTransitionFilter(object):
+    """Filter instances by state.
+
+    Try to simplify construction for policy authors by automatically
+    filtering elements (filters or actions) to the instances states
+    they are valid for.
+
+    """
     valid_origin_states = ()
 
     def filter_instance_state(self, instances, states=None):
