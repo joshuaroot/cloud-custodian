@@ -21,8 +21,8 @@ class TestNotebookInstance(BaseTest):
         session_factory = self.replay_flight_data(
             'test_sagemaker_notebook_instances')
         p = self.load_policy({
-            'name': 'list-notebook-instances',
-            'resource': 'notebook-instance'
+            'name': 'list-sagemaker-notebooks',
+            'resource': 'sagemaker-notebook'
         }, session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
@@ -31,8 +31,8 @@ class TestNotebookInstance(BaseTest):
         session_factory = self.replay_flight_data(
             'test_sagemaker_tag_notebook_instances')
         p = self.load_policy({
-            'name': 'tag-notebook-instances',
-            'resource': 'notebook-instance',
+            'name': 'tag-sagemaker-notebooks',
+            'resource': 'sagemaker-notebook',
             'filters': [{
                 'tag:Category': 'absent'}],
             'actions': [{
@@ -52,8 +52,8 @@ class TestNotebookInstance(BaseTest):
         session_factory = self.replay_flight_data(
             'test_sagemaker_remove_tag_notebook_instances')
         p = self.load_policy({
-            'name': 'untag-notebook-instances',
-            'resource': 'notebook-instance',
+            'name': 'untag-sagemaker-notebooks',
+            'resource': 'sagemaker-notebook',
             'filters': [{
                 'tag:Category': 'TestValue'}],
             'actions': [{
@@ -72,8 +72,8 @@ class TestNotebookInstance(BaseTest):
         session_factory = self.replay_flight_data(
             'test_sagemaker_mark_for_op_notebook_instance')
         p = self.load_policy({
-            'name': 'notebook-instances-untagged-delete',
-            'resource': 'notebook-instance',
+            'name': 'sagemaker-notebooks-untagged-delete',
+            'resource': 'sagemaker-notebook',
             'filters': [
                 {'tag:Category': 'absent'},
                 {'tag:custodian_cleanup': 'absent'},
@@ -94,8 +94,8 @@ class TestNotebookInstance(BaseTest):
         session_factory = self.replay_flight_data(
             'test_sagemaker_marked_for_op_notebook_instance')
         p = self.load_policy({
-            'name': 'notebook-instances-untagged-delete',
-            'resource': 'notebook-instance',
+            'name': 'sagemaker-notebooks-untagged-delete',
+            'resource': 'sagemaker-notebook',
             'filters': [{
                 'type': 'marked-for-op',
                 'tag': 'custodian_cleanup',
@@ -108,8 +108,8 @@ class TestNotebookInstance(BaseTest):
         session_factory = self.replay_flight_data(
             'test_sagemaker_start_notebook_instance')
         p = self.load_policy({
-            'name': 'start-notebook-instance',
-            'resource': 'notebook-instance',
+            'name': 'start-sagemaker-notebook',
+            'resource': 'sagemaker-notebook',
             'actions': [{'type': 'start'}]}, session_factory=session_factory)
         resources = p.run()
         self.assertTrue(len(resources), 1)
@@ -123,8 +123,8 @@ class TestNotebookInstance(BaseTest):
         session_factory = self.replay_flight_data(
             'test_sagemaker_stop_notebook_instance')
         p = self.load_policy({
-            'name': 'stop-invalid-notebook-instance',
-            'resource': 'notebook-instance',
+            'name': 'stop-invalid-sagemaker-notebook',
+            'resource': 'sagemaker-notebook',
             'filters': [
                 {'tag:Category': 'absent'}],
             'actions': [{'type': 'stop'}]}, session_factory=session_factory)
@@ -140,8 +140,8 @@ class TestNotebookInstance(BaseTest):
         session_factory = self.replay_flight_data(
             'test_sagemaker_delete_notebook_instance')
         p = self.load_policy({
-            'name': 'delete-invalid-notebook-instance',
-            'resource': 'notebook-instance',
+            'name': 'delete-invalid-sagemaker-notebook',
+            'resource': 'sagemaker-notebook',
             'filters': [
                 {'tag:DeleteMe': 'present'}],
             'actions': [{'type': 'delete'}]}, session_factory=session_factory)

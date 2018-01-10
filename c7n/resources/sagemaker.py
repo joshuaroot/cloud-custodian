@@ -27,7 +27,7 @@ filters = FilterRegistry('sagemaker.filters')
 filters.register('marked-for-op', TagActionFilter)
 
 
-@resources.register('notebook-instance')
+@resources.register('sagemaker-notebook')
 class NotebookInstance(QueryResourceManager):
 
     class resource_type(object):
@@ -79,15 +79,15 @@ class StateTransitionFilter(object):
 
 @NotebookInstance.action_registry.register('tag')
 class TagNotebookInstance(Tag):
-    """Action to create tag(s) on a notebook-instance
+    """Action to create tag(s) on a sagemaker-notebook
 
     :example:
 
     .. code-block:: yaml
 
             policies:
-              - name: tag-notebook-instance
-                resource: notebook-instance
+              - name: tag-sagemaker-notebook
+                resource: sagemaker-notebook
                 filters:
                   - "tag:target-tag": absent
                 actions:
@@ -118,14 +118,14 @@ class TagNotebookInstance(Tag):
 
 @NotebookInstance.action_registry.register('remove-tag')
 class RemoveTagNotebookInstance(RemoveTag):
-    """Remove tag(s) from notebook-instance(s)
+    """Remove tag(s) from sagemaker-notebook(s)
 
     :example:
 
     .. code-block:: yaml
 
             policies:
-              - name: notebook-instance-remove-tag
+              - name: sagemaker-notebook-remove-tag
                 resource: notebook-instabce
                 filters:
                   - "tag:BadTag": present
@@ -159,8 +159,8 @@ class MarkNotebookInstanceForOp(TagDelayedAction):
     .. code-block:: yaml
 
         policies:
-          - name: notebook-instance-invalid-tag-stop
-            resource: notebook-instance
+          - name: sagemaker-notebook-invalid-tag-stop
+            resource: sagemaker-notebook
             filters:
               - "tag:InvalidTag": present
             actions:
@@ -191,15 +191,15 @@ class MarkNotebookInstanceForOp(TagDelayedAction):
 
 @NotebookInstance.action_registry.register('start')
 class StartNotebookInstance(BaseAction, StateTransitionFilter):
-    """Start notebook-instance(s)
+    """Start sagemaker-notebook(s)
 
     :example:
 
     .. code-block: yaml
 
         policies:
-          - name: start-notebook-instance
-            resource: notebook-instance
+          - name: start-sagemaker-notebook
+            resource: sagemaker-notebook
             actions:
               - start
     """
@@ -229,15 +229,15 @@ class StartNotebookInstance(BaseAction, StateTransitionFilter):
 
 @NotebookInstance.action_registry.register('stop')
 class StopNotebookInstance(BaseAction, StateTransitionFilter):
-    """Stop notebook-instance(s)
+    """Stop sagemaker-notebook(s)
 
     :example:
 
     .. code-block: yaml
 
         policies:
-          - name: stop-notebook-instance
-            resource: notebook-instance
+          - name: stop-sagemaker-notebook
+            resource: sagemaker-notebook
             filters:
               - "tag:DeleteMe": present
             actions:
@@ -269,15 +269,15 @@ class StopNotebookInstance(BaseAction, StateTransitionFilter):
 
 @NotebookInstance.action_registry.register('delete')
 class DeleteNotebookInstance(BaseAction, StateTransitionFilter):
-    """Deletes notebook-instance(s)
+    """Deletes sagemaker-notebook(s)
 
     :example:
 
     .. code-block: yaml
 
         policies:
-          - name: delete-notebook-instance
-            resource: notebook-instance
+          - name: delete-sagemaker-notebook
+            resource: sagemaker-notebook
             filters:
               - "tag:DeleteMe": present
             actions:
