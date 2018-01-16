@@ -154,7 +154,7 @@ class InstanceTag(Tag):
                 client.add_tags_to_resource(
                     ResourceArn=r['ReplicationInstanceArn'],
                     Tags=tags_list)
-            except Exception as e:
+            except ClientError as e:
                 self.log.exception(
                     'Exception while adding tags to %s: %s',
                     r['ReplicationInstanceIdentifier'], e)
@@ -188,7 +188,7 @@ class InstanceRemoveTag(RemoveTag):
                 client.remove_tags_from_resource(
                     ResourceArn=r['ReplicationInstanceArn'],
                     TagKeys=tags)
-            except Exception as e:
+            except ClientError as e:
                 self.log.exception(
                     'Exception while removing tags from %s: %s',
                     r['ReplicationInstanceIdentifier'], e)
@@ -227,7 +227,7 @@ class InstanceMarkForOp(TagDelayedAction):
                 client.add_tags_to_resource(
                     ResourceArn=r['ReplicationInstanceArn'],
                     Tags=tags_list)
-            except Exception as e:
+            except ClientError as e:
                 self.log.exception(
                     'Exception while adding op tag to %s: %s',
                     r['ReplicationInstanceIdentifier'], e)
