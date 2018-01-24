@@ -24,10 +24,6 @@ from c7n.filters import FilterRegistry
 from c7n.tags import RemoveTag, Tag, TagActionFilter, TagDelayedAction
 
 
-filters = FilterRegistry('dms.filters')
-filters.register('marked-for-op', TagActionFilter)
-
-
 @resources.register('dms-instance')
 class ReplicationInstance(QueryResourceManager):
 
@@ -42,6 +38,9 @@ class ReplicationInstance(QueryResourceManager):
 
         # The api supports filtering which we handle via describe source.
         filter_name = filter_type = None
+
+    filters = FilterRegistry('dms-instance.filters')
+    filters.register('marked-for-op', TagActionFilter)
     filter_registry = filters
     retry = staticmethod(get_retry(('Throttled',)))
 
@@ -146,9 +145,7 @@ class InstanceTag(Tag):
 
     def process_resource_set(self, resources, tags):
         client = local_session(self.manager.session_factory).client('dms')
-        tags_list = []
-        for t in tags:
-            tags_list.append({'Key': t['Key'], 'Value': t['Value']})
+        tags_list = [{(k, v) for (k, v) in tags.items()}]
         for r in resources:
             try:
                 client.add_tags_to_resource(
@@ -219,9 +216,7 @@ class InstanceMarkForOp(TagDelayedAction):
 
     def process_resource_set(self, resources, tags):
         client = local_session(self.manager.session_factory).client('dms')
-        tags_list = []
-        for t in tags:
-            tags_list.append({'Key': t['Key'], 'Value': t['Value']})
+        tags_list = [{(k, v) for (k, v) in tags.items()}]
         for r in resources:
             try:
                 client.add_tags_to_resource(
