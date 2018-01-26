@@ -152,10 +152,9 @@ class InstanceTag(Tag):
                     ResourceArn=r['ReplicationInstanceArn'],
                     Tags=tags_list)
             except ClientError as e:
-                self.log.exception(
-                    'Exception while adding tags to %s: %s',
-                    r['ReplicationInstanceIdentifier'], e)
-                continue
+                if e.response['Error']['Code'] == 'ResourceNotFoundFault':
+                    continue
+                raise
 
 
 @ReplicationInstance.action_registry.register('remove-tag')
@@ -186,10 +185,9 @@ class InstanceRemoveTag(RemoveTag):
                     ResourceArn=r['ReplicationInstanceArn'],
                     TagKeys=tags)
             except ClientError as e:
-                self.log.exception(
-                    'Exception while removing tags from %s: %s',
-                    r['ReplicationInstanceIdentifier'], e)
-                continue
+                if e.response['Error']['Code'] == 'ResourceNotFoundFault':
+                    continue
+                raise
 
 
 @ReplicationInstance.action_registry.register('mark-for-op')
@@ -223,7 +221,6 @@ class InstanceMarkForOp(TagDelayedAction):
                     ResourceArn=r['ReplicationInstanceArn'],
                     Tags=tags_list)
             except ClientError as e:
-                self.log.exception(
-                    'Exception while adding op tag to %s: %s',
-                    r['ReplicationInstanceIdentifier'], e)
-                continue
+                if e.response['Error']['Code'] == 'ResourceNotFoundFault':
+                    continue
+                raise
