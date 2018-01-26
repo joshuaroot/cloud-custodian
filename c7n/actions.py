@@ -17,6 +17,7 @@ Actions to take on resources
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import base64
+import copy
 from datetime import datetime
 import jmespath
 import logging
@@ -389,6 +390,8 @@ class Notify(EventAction):
               - event-user
               - resource-creator
               - email@address
+             owner_absent_contact:
+              - other_email@address
              # which template for the email should we use
              template: policy-template
              transport:
@@ -407,6 +410,7 @@ class Notify(EventAction):
         'properties': {
             'type': {'enum': ['notify']},
             'to': {'type': 'array', 'items': {'type': 'string'}},
+            'owner_absent_contact': {'type': 'array', 'items': {'type': 'string'}},
             'to_from': ValuesFrom.schema,
             'cc': {'type': 'array', 'items': {'type': 'string'}},
             'cc_from': ValuesFrom.schema,
@@ -448,7 +452,7 @@ class Notify(EventAction):
     def expand_variables(self, message):
         """expand any variables in the action to_from/cc_from fields.
         """
-        p = self.data.copy()
+        p = copy.deepcopy(self.data)
         if 'to_from' in self.data:
             to_from = self.data['to_from'].copy()
             to_from['url'] = to_from['url'].format(**message)
@@ -678,7 +682,7 @@ class PutMetric(BaseAction):
 
     :example:
 
-        .. code-block: yaml
+    .. code-block:: yaml
 
             policies:
               - name: track-attached-ebs

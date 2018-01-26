@@ -121,6 +121,82 @@ class BucketMetrics(BaseTest):
             'AWS/S3.NumberOfObjects.Average' in resources[0]['c7n.metrics'])
 
 
+class BucketEncryption(BaseTest):
+
+    def test_s3_bucket_encryption_filter(self):
+        bname = 'c7n-bucket-with-encryption'
+        self.patch(s3.S3, 'executor_factory', MainThreadExecutor)
+        self.patch(s3, 'S3_AUGMENT_TABLE', [])
+
+        session_factory = self.replay_flight_data('test_s3_bucket_encryption_filter')
+
+        client = session_factory().client('s3')
+        client.create_bucket(Bucket=bname)
+        self.addCleanup(client.delete_bucket, Bucket=bname)
+
+        enc = {
+            'Rules': [{
+                'ApplyServerSideEncryptionByDefault': {
+                    'SSEAlgorithm': 'AES256'
+                }
+            }]
+        }
+
+        client.put_bucket_encryption(Bucket=bname, ServerSideEncryptionConfiguration=enc)
+
+        p = self.load_policy({
+            'name': 's3-enc',
+            'resource': 's3',
+            'filters': [
+                {
+                    'type': 'bucket-encryption',
+                    'crypto': 'AES256'
+                }
+            ]
+        }, session_factory=session_factory)
+        resources = p.run() or []
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['Name'], bname)
+
+    def test_s3_bucket_encryption_filter_kms(self):
+        bname = 'c7n-bucket-with-encryption'
+        self.patch(s3.S3, 'executor_factory', MainThreadExecutor)
+        self.patch(s3, 'S3_AUGMENT_TABLE', [])
+
+        session_factory = self.replay_flight_data('test_s3_bucket_encryption_filter_kms')
+
+        client = session_factory().client('s3')
+        client.create_bucket(Bucket=bname)
+        self.addCleanup(client.delete_bucket, Bucket=bname)
+
+        aws_alias = 'arn:aws:kms:us-east-1:108891588060:key/079a6f7d-5f8a-4da1-a465-30aa099b9688'
+        enc = {
+            'Rules': [{
+                'ApplyServerSideEncryptionByDefault': {
+                    'SSEAlgorithm': 'aws:kms',
+                    'KMSMasterKeyID': aws_alias
+                }
+            }]
+        }
+
+        client.put_bucket_encryption(Bucket=bname, ServerSideEncryptionConfiguration=enc)
+
+        p = self.load_policy({
+            'name': 's3-enc-kms',
+            'resource': 's3',
+            'filters': [
+                {
+                    'type': 'bucket-encryption',
+                    'crypto': 'aws:kms',
+                    'key': 'alias/aws/s3'
+                }
+            ]
+        }, session_factory=session_factory)
+        resources = p.run() or []
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['Name'], bname)
+
+
 class BucketInventory(BaseTest):
 
     def test_s3_set_encrypted_inventory_sses3(self):
@@ -1216,6 +1292,7 @@ class S3Test(BaseTest):
         versioning = client.get_bucket_versioning(Bucket=bname)['Status']
         self.assertEqual('Suspended', versioning)
 
+    @functional
     def test_enable_logging(self):
         self.patch(s3.S3, 'executor_factory', MainThreadExecutor)
         self.patch(s3, 'S3_AUGMENT_TABLE', [
@@ -1226,29 +1303,47 @@ class S3Test(BaseTest):
         session = session_factory()
         client = session.client('s3')
         client.create_bucket(Bucket=bname)
+        client.put_bucket_acl(
+            Bucket=bname,
+            AccessControlPolicy={
+                "Owner": {
+                    "DisplayName": "mandeep.bal",
+                    "ID": "e7c8bb65a5fc49cf906715eae09de9e4bb7861a96361ba79b833aa45f6833b15",
+                },
+                'Grants': [
+                    {'Grantee': {
+                        'Type': 'Group',
+                        'URI': 'http://acs.amazonaws.com/groups/s3/LogDelivery'},
+                     'Permission': 'WRITE'},
+                    {'Grantee': {
+                        'Type': 'Group',
+                        'URI': 'http://acs.amazonaws.com/groups/s3/LogDelivery'},
+                     'Permission': 'READ_ACP'}]})
+                    
         self.addCleanup(destroyBucket, client, bname)
+
         p = self.load_policy({
             'name': 's3-version',
             'resource': 's3',
             'filters': [{'Name': bname}],
             'actions': [
                 {'type': 'toggle-logging',
-                 'target_bucket': bname}]
+                 'target_bucket': bname,
+                 'target_prefix': '{account}/{source_bucket_name}'}]
             }, session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
         self.assertEqual(resources[0]['Name'], bname)
 
         # eventual consistency fun for recording
-        #time.sleep(10)
-        logging = client.get_bucket_logging(Bucket=bname)['Status']
-        self.assertEqual('Enabled', logging)
+        if self.recording:
+            time.sleep(5)
 
-        # running against a bucket with logging already on
-        # is idempotent
-        resources = p.run()
-        self.assertEqual(len(resources), 1)
+        logging = client.get_bucket_logging(Bucket=bname).get('LoggingEnabled')
+        self.assertTrue(logging)
+        self.assertEqual(logging['TargetPrefix'], 'custodian-skunk-works/superduper-and-magic')
 
+        # Flip the switch
         p = self.load_policy({
             'name': 's3-version',
             'resource': 's3',
@@ -1261,9 +1356,11 @@ class S3Test(BaseTest):
         self.assertEqual(len(resources), 1)
 
         # eventual consistency fun for recording
-        #time.sleep(10)
-        logging = client.get_bucket_logging(Bucket=bname)['Status']
-        self.assertEqual('Disabled', logging)
+        if self.recording:
+            time.sleep(12)
+
+        logging = client.get_bucket_logging(Bucket=bname).get('LoggingEnabled')
+        self.assertFalse(logging)
 
     def test_encrypt_policy(self):
         self.patch(s3, 'S3_AUGMENT_TABLE', [

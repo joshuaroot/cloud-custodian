@@ -21,7 +21,7 @@ from c7n.filters import FilterRegistry, AgeFilter, Filter, OPERATORS
 
 from c7n.manager import resources
 from c7n.query import QueryResourceManager
-from c7n.utils import local_session, type_schema
+from c7n.utils import local_session, type_schema, get_retry
 
 
 log = logging.getLogger('custodian.ami')
@@ -66,7 +66,7 @@ class Deregister(BaseAction):
 
     :example:
 
-        .. code-block: yaml
+    .. code-block:: yaml
 
             policies:
               - name: ami-deregister-old
@@ -86,8 +86,11 @@ class Deregister(BaseAction):
             list(w.map(self.process_image, images))
 
     def process_image(self, image):
+        retry = get_retry((
+            'RequestLimitExceeded', 'Client.RequestLimitExceeded'))
+
         client = local_session(self.manager.session_factory).client('ec2')
-        client.deregister_image(ImageId=image['ImageId'])
+        retry(client.deregister_image, ImageId=image['ImageId'])
 
 
 @actions.register('remove-launch-permissions')
@@ -100,7 +103,7 @@ class RemoveLaunchPermissions(BaseAction):
 
     :example:
 
-        .. code-block: yaml
+    .. code-block:: yaml
 
             policies:
               - name: ami-remove-launch-permissions
@@ -132,7 +135,7 @@ class ImageAgeFilter(AgeFilter):
 
     :example:
 
-        .. code-block: yaml
+    .. code-block:: yaml
 
             policies:
               - name: ami-remove-launch-permissions
@@ -158,7 +161,7 @@ class ImageUnusedFilter(Filter):
 
     :example:
 
-        .. code-block: yaml
+    .. code-block:: yaml
 
             policies:
               - name: ami-unused
