@@ -723,42 +723,38 @@ class LaunchActivityFilter(Filter):
     permissions = ('autoscaling:DescribeScalingActivities',)
 
     @worker
-    def asg_activities(self, asg, events_until):
-        client = local_session(
-            self.manager.session_factory).client('autoscaling')
-        p = client.get_paginator('describe_scaling_activities')
-
-        expire = False
-        for activity in p.paginate(
-                AutoScalingGroupName=asg['AutoScalingGroupName']):
-            for a in activity['Activities']:
-                if expire:
-                    break
-
-                if events_until:
-                    # if value for days is provided, break after reaching an
-                    # event that is older that desired
-                    if a['StartTime'].replace(tzinfo=tzutc()) < events_until:
-                        expire = True
-                        continue
-
-                asg.setdefault('c7n:Status', [])
-                if a['StatusCode'] not in asg['c7n:Status']:
-                    asg['c7n:Status'].append(str(a['StatusCode']))
-
-    def process(self, asgs, event=None):
+    def asg_activities(self, asg):
         events_until = None
         if self.data.get('days'):
             events_until = (datetime.now(tz=tzutc()) - timedelta(
                 days=self.data.get('days')))
 
+        client = local_session(
+            self.manager.session_factory).client('autoscaling')
+        p = client.get_paginator('describe_scaling_activities')
+
+        expire = False
+        asg['c7n:Status'] = set()
+        for activity in p.paginate(
+                AutoScalingGroupName=asg['AutoScalingGroupName']):
+            for a in activity['Activities']:
+                if events_until and a['StartTime'].replace(
+                        tzinfo=tzutc()) < events_until:
+                    expire = True
+                    break
+                asg['c7n:Status'].add(a['StatusCode'])
+            if expire:
+                break
+
+    def process(self, asgs, event=None):
         with self.executor_factory(max_workers=2) as w:
             for asg_set in utils.chunks(asgs, size=10):
-                list(w.map(self.asg_activities, (asg_set, events_until)))
+                list(w.map(self.asg_activities, asg_set))
         results = []
         for a in asgs:
+            a['c7n:Status'] = list(a['c7n:Status'])
             for s in a['c7n:Status']:
-                if s in self.data.get('status', ['Successful']):
+                if s in self.data.get('status'):
                     results.append(a)
         return results
 
