@@ -15,6 +15,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from botocore.exceptions import ClientError
 
+import six
+
 from c7n.manager import resources
 from c7n.filters import FilterRegistry
 from c7n.query import QueryResourceManager
@@ -67,14 +69,120 @@ class SagemakerJob(QueryResourceManager):
     class resource_type(object):
         service = 'sagemaker'
         enum_spec = ('list_training_jobs', 'TrainingJobSummaries', None)
-        detail_spec = (
-            'describe_training_job', 'TrainingJobName',
-            'TrainingJobName', None)
+        # detail_spec = (
+        #     'describe_training_job', 'TrainingJobName',
+        #     'TrainingJobName', None)
         id = 'TrainingJobArn'
         name = 'TrainingJobName'
         date = 'CreationTime'
         dimension = None
         filter_name = None
+
+    def __init__(self, ctx, data):
+        super(SagemakerJob, self).__init__(ctx, data)
+        self.queries = QueryFilter.parse(
+            self.data.get('query', [
+                {'StatusEquals': 'InProgress'}]))
+
+    @classmethod
+    def get_permissions(cls):
+        return ("sagemaker:ListTrainingJobs",
+                "sagemaker:DescribeTrainingJob")
+
+    def get_resources(self, jobs):
+        # no filtering by id set supported at the api
+        client = local_session(self.session_factory).client('sagemaker')
+        results = []
+        for job in jobs:
+            results.append(
+                client.describe_training_job(
+                    TrainingJobName=job['TrainingJobName']))
+        return results
+
+    def resources(self, query=None):
+        q = self.query_filter()
+        if q is not None:
+            query = query or {}
+            for i in range(0, len(q)):
+                query[q[i]['Name']] = q[i]['Value']
+        return super(SagemakerJob, self).resources(query=query)
+
+    def query_filter(self):
+        result = []
+        names = set()
+        for q in self.queries:
+            query_filter = q.query()
+            if query_filter['Name'] in names:
+                self.log.info("Cannot filter multiple times on the same key.")
+                continue
+            else:
+                names.add(query_filter['Name'])
+                if isinstance(query_filter['Value'], list):
+                    query_filter['Value'] = query_filter['Value'][0]
+                result.append(query_filter)
+        if 'StatusEquals' not in names:
+            # include default query
+            result.append({'Name': 'StatusEquals', 'Value': 'InProgress'})
+        return result
+
+    def augment(self, jobs):
+        client = local_session(
+            self.get_resource_manager(
+                'sagemaker-job').session_factory).client('sagemaker')
+        result = []
+        # remap for cwmetrics
+        for j in jobs:
+            job = client.describe_training_job(
+                TrainingJobName=j['TrainingJobName'])
+            job['ResourceArn'] = job['TrainingJobArn']
+            result.append(job)
+        return result
+
+
+JOB_FILTERS = ('StatusEquals',)
+
+
+class QueryFilter(object):
+    @classmethod
+    def parse(cls, data):
+        results = []
+        for d in data:
+            if not isinstance(d, dict):
+                raise ValueError(
+                    "Training-Job Query Filter Invalid structure %s" % d)
+            results.append(cls(d).validate())
+        return results
+
+    def __init__(self, data):
+        self.data = data
+        self.key = None
+        self.value = None
+
+    def validate(self):
+        if not len(list(self.data.keys())) == 1:
+            raise ValueError(
+                "Training-Job Query Filter Invalid %s" % self.data)
+        self.key = list(self.data.keys())[0]
+        self.value = list(self.data.values())[0]
+
+        if self.key not in JOB_FILTERS and not self.key.startswith('tag:'):
+            raise ValueError(
+                "Training-Job Query Filter invalid filter name %s" % (
+                    self.data))
+
+        if self.value is None:
+            raise ValueError(
+                "Training-Job Query Filters must have a value, use tag-key"
+                " w/ tag name as value for tag present checks"
+                " %s" % self.data)
+        return self
+
+    def query(self):
+        value = self.value
+        if isinstance(self.value, six.string_types):
+            value = [self.value]
+
+        return {'Name': self.key, 'Value': value}
 
 
 @resources.register('sagemaker-endpoint')

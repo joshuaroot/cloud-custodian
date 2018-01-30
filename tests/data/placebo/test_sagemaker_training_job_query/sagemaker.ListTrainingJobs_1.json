@@ -1,0 +1,55 @@
+{
+    "status_code": 200, 
+    "data": {
+        "TrainingJobSummaries": [
+            {
+                "TrainingJobName": "c7n-job-2018-01-12-18-23-33", 
+                "TrainingJobArn": "arn:aws:sagemaker:us-east-1:644160558196:training-job/c7n-job-2018-01-12-18-23-33", 
+                "CreationTime": {
+                    "hour": 13, 
+                    "__class__": "datetime", 
+                    "month": 1, 
+                    "second": 33, 
+                    "microsecond": 406000, 
+                    "year": 2018, 
+                    "day": 12, 
+                    "minute": 23
+                }, 
+                "TrainingJobStatus": "Failed", 
+                "TrainingEndTime": {
+                    "hour": 13, 
+                    "__class__": "datetime", 
+                    "month": 1, 
+                    "second": 1, 
+                    "microsecond": 498000, 
+                    "year": 2018, 
+                    "day": 12, 
+                    "minute": 30
+                }, 
+                "LastModifiedTime": {
+                    "hour": 13, 
+                    "__class__": "datetime", 
+                    "month": 1, 
+                    "second": 1, 
+                    "microsecond": 708000, 
+                    "year": 2018, 
+                    "day": 12, 
+                    "minute": 30
+                }
+            }
+        ], 
+        "NextToken": "cIws2QhTXUIa8bi8W4KJm/zACPIpHoLNRxTv7W3NFKbmximanFGgVL2EKbKzFbKr/2b/qxYcfhq5PP8ShUE7AGuzBJViWqr2LWXwRDOzkpDS4P0d96PP0KnMgd/lbdjQVacNtPacpzzwbhnbgP7f2ZniY+3GMnF5jCEC+jgs9ZfM08E7GKl9wBlf7z48wa8d9CMb6hAQoS74Ej5Q+j3BDcnAQWUB/UPoKk9cf2v42R4VZe12uvTFiJsdwDxJ8f5z0MmnGf3nWgrCaLUkvJ1Q2AJQeD3hVn2cksLI/LyE9LDbsFfl9WYHnJKRtra5+pVWhiUUfH6HWOhpXXsx17pHCYY1PnN3h858DwXCsEhIYRUmcDWqCg1xJAxZCZU6geS1OWFxemIir30alOGI70q035w2q50qcrFluE20W858DFSCImFWOBvILZdT4S99qFAmduP48i7dvVfgXoyyd2zRqTX4j76xuhe8Q4yZKezfPU+g8fLZ755QtMFtGaiScrdq7ndiD1iTtDMYRen1XfkmOAgCJClBPSFhPfUkroecRn4vV8T4+qv1XA==", 
+        "ResponseMetadata": {
+            "RetryAttempts": 0, 
+            "HTTPStatusCode": 200, 
+            "RequestId": "a7df57d3-df3d-42b1-8d21-2e0d0ab1fb80", 
+            "HTTPHeaders": {
+                "date": "Tue, 30 Jan 2018 16:01:44 GMT", 
+                "x-amzn-requestid": "a7df57d3-df3d-42b1-8d21-2e0d0ab1fb80", 
+                "content-length": "1457", 
+                "content-type": "application/x-amz-json-1.1", 
+                "connection": "keep-alive"
+            }
+        }
+    }
+}
