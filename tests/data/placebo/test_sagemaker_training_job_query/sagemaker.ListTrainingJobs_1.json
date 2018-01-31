@@ -3,50 +3,50 @@
     "data": {
         "TrainingJobSummaries": [
             {
-                "TrainingJobName": "c7n-job-2018-01-12-18-23-33", 
-                "TrainingJobArn": "arn:aws:sagemaker:us-east-1:644160558196:training-job/c7n-job-2018-01-12-18-23-33", 
+                "TrainingJobName": "c7n-job-2018-01-12-18-23-33",
+                "TrainingJobArn": "arn:aws:sagemaker:us-east-1:644160558196:training-job/c7n-job-2018-01-12-18-23-33",
                 "CreationTime": {
-                    "hour": 13, 
-                    "__class__": "datetime", 
-                    "month": 1, 
-                    "second": 33, 
-                    "microsecond": 406000, 
-                    "year": 2018, 
-                    "day": 12, 
+                    "hour": 13,
+                    "__class__": "datetime",
+                    "month": 1,
+                    "second": 33,
+                    "microsecond": 406000,
+                    "year": 2018,
+                    "day": 12,
                     "minute": 23
-                }, 
-                "TrainingJobStatus": "Failed", 
+                },
+                "TrainingJobStatus": "Failed",
                 "TrainingEndTime": {
-                    "hour": 13, 
-                    "__class__": "datetime", 
-                    "month": 1, 
-                    "second": 1, 
-                    "microsecond": 498000, 
-                    "year": 2018, 
-                    "day": 12, 
+                    "hour": 13,
+                    "__class__": "datetime",
+                    "month": 1,
+                    "second": 1,
+                    "microsecond": 498000,
+                    "year": 2018,
+                    "day": 12,
                     "minute": 30
-                }, 
+                },
                 "LastModifiedTime": {
-                    "hour": 13, 
-                    "__class__": "datetime", 
-                    "month": 1, 
-                    "second": 1, 
-                    "microsecond": 708000, 
-                    "year": 2018, 
-                    "day": 12, 
+                    "hour": 13,
+                    "__class__": "datetime",
+                    "month": 1,
+                    "second": 1,
+                    "microsecond": 708000,
+                    "year": 2018,
+                    "day": 12,
                     "minute": 30
                 }
             }
-        ], 
-        "NextToken": "cIws2QhTXUIa8bi8W4KJm/zACPIpHoLNRxTv7W3NFKbmximanFGgVL2EKbKzFbKr/2b/qxYcfhq5PP8ShUE7AGuzBJViWqr2LWXwRDOzkpDS4P0d96PP0KnMgd/lbdjQVacNtPacpzzwbhnbgP7f2ZniY+3GMnF5jCEC+jgs9ZfM08E7GKl9wBlf7z48wa8d9CMb6hAQoS74Ej5Q+j3BDcnAQWUB/UPoKk9cf2v42R4VZe12uvTFiJsdwDxJ8f5z0MmnGf3nWgrCaLUkvJ1Q2AJQeD3hVn2cksLI/LyE9LDbsFfl9WYHnJKRtra5+pVWhiUUfH6HWOhpXXsx17pHCYY1PnN3h858DwXCsEhIYRUmcDWqCg1xJAxZCZU6geS1OWFxemIir30alOGI70q035w2q50qcrFluE20W858DFSCImFWOBvILZdT4S99qFAmduP48i7dvVfgXoyyd2zRqTX4j76xuhe8Q4yZKezfPU+g8fLZ755QtMFtGaiScrdq7ndiD1iTtDMYRen1XfkmOAgCJClBPSFhPfUkroecRn4vV8T4+qv1XA==", 
+        ],
+        "NextToken": "cIws2QhTXUIa8bi8W4KJm/zACPIpHoLNRxTv7W3NFKbmximanFGgVL2EKbKzFbKr/2WX1B8BT6rC0Nsk1ulJDI3CNPEMaJy7DPvYrcciUrSQonmfza6Ogm3vu2GYPHGENI7wprLhDNhiL1Evp+ulCY2hi4U+inyiF7M1B4tc3mcwaFhnGDyYxYOHMm8r9rROajE2fuNlbsYPH2EgSC9OXrkcWVExNOIjDefGNOfgWwmCrf60K2ZeBZin4qxYED9TcvU812LSyJ16YDDI0b3dHeKV1ApIG2m1FbtRWO4bwQOp+tsgwrrBhZg4QfBHhwfEYsAXiwt/w7R80Gp3xM4wlt0eXFfVYFBdADh5h8RZkwPx/ExVA0PYCidk9wDm44z82OOP97StvTkMOpA/OpwNWlIWJAExNf0TRTFd1HiIIiAPryAEfllhR8iOAluIFWAeGCA4u+tv5bPRbgE+q/gCfMn/JsW2WlHkBTRdur7IPfVRtLL5nIr384RATj7OfUCfdB7EAKgBv3tpsPI2zz/lVlslfdhqhl8ApBewG0fPrWqtjwMeVgrj/8Bo", 
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "a7df57d3-df3d-42b1-8d21-2e0d0ab1fb80", 
+            "RequestId": "b9a6ebcc-875d-475a-bbb0-5adb19945204", 
             "HTTPHeaders": {
-                "date": "Tue, 30 Jan 2018 16:01:44 GMT", 
-                "x-amzn-requestid": "a7df57d3-df3d-42b1-8d21-2e0d0ab1fb80", 
-                "content-length": "1457", 
+                "date": "Wed, 31 Jan 2018 13:39:50 GMT", 
+                "x-amzn-requestid": "b9a6ebcc-875d-475a-bbb0-5adb19945204", 
+                "content-length": "610", 
                 "content-type": "application/x-amz-json-1.1", 
                 "connection": "keep-alive"
             }

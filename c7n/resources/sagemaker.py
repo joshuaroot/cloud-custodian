@@ -67,35 +67,23 @@ class SagemakerJob(QueryResourceManager):
     class resource_type(object):
         service = 'sagemaker'
         enum_spec = ('list_training_jobs', 'TrainingJobSummaries', None)
-        # detail_spec = (
-        #     'describe_training_job', 'TrainingJobName',
-        #     'TrainingJobName', None)
+        detail_spec = (
+            'describe_training_job', 'TrainingJobName', 'TrainingJobName', None)
         id = 'TrainingJobArn'
         name = 'TrainingJobName'
         date = 'CreationTime'
         dimension = None
         filter_name = None
 
+    permissions = (
+        'sagemaker:ListTrainingJobs', 'sagemaker:DescribeTrainingJobs',
+        'sagemaker:ListTags')
+
     def __init__(self, ctx, data):
         super(SagemakerJob, self).__init__(ctx, data)
         self.queries = QueryFilter.parse(
             self.data.get('query', [
                 {'StatusEquals': 'InProgress'}]))
-
-    @classmethod
-    def get_permissions(cls):
-        return ("sagemaker:ListTrainingJobs",
-                "sagemaker:DescribeTrainingJob")
-
-    def get_resources(self, jobs):
-        # no filtering by id set supported at the api
-        client = local_session(self.session_factory).client('sagemaker')
-        results = []
-        for job in jobs:
-            results.append(
-                client.describe_training_job(
-                    TrainingJobName=job['TrainingJobName']))
-        return results
 
     def resources(self, query=None):
         q = self.query_filter()
@@ -124,20 +112,19 @@ class SagemakerJob(QueryResourceManager):
         return result
 
     def augment(self, jobs):
-        client = local_session(
-            self.get_resource_manager(
-                'sagemaker-job').session_factory).client('sagemaker')
-        result = []
-        # remap for cwmetrics
-        for j in jobs:
-            job = client.describe_training_job(
-                TrainingJobName=j['TrainingJobName'])
-            job['ResourceArn'] = job['TrainingJobArn']
-            result.append(job)
-        return result
+        client = local_session(self.session_factory).client('sagemaker')
+
+        def _augment(j):
+            tags = client.list_tags(ResourceArn=j['TrainingJobArn'])['Tags']
+            j['Tags'] = tags
+            return j
+
+        jobs = super(SagemakerJob, self).augment(jobs)
+        with self.executor_factory(max_workers=1) as w:
+            return list(filter(None, w.map(_augment, jobs)))
 
 
-JOB_FILTERS = ('StatusEquals',)
+JOB_FILTERS = ('StatusEquals', 'NameContains',)
 
 
 class QueryFilter(object):
@@ -275,6 +262,7 @@ class StateTransitionFilter(object):
 @SagemakerEndpoint.action_registry.register('tag')
 @SagemakerEndpointConfig.action_registry.register('tag')
 @NotebookInstance.action_registry.register('tag')
+@SagemakerJob.action_registry.register('tag')
 class TagNotebookInstance(Tag):
     """Action to create tag(s) on a SageMaker resource
     (notebook-instance, endpoint, endpoint-config)
@@ -310,6 +298,15 @@ class TagNotebookInstance(Tag):
                   - type: tag
                     key: required-tag
                     value: required-value
+
+              - name: tag-sagemaker-job
+                resource: sagemaker-job
+                filters:
+                    - "tag:required-tag": absent
+                actions:
+                  - type: tag
+                    key: required-tag
+                    value: required-value
     """
     permissions = ('sagemaker:AddTags',)
 
@@ -327,6 +324,7 @@ class TagNotebookInstance(Tag):
 @SagemakerEndpoint.action_registry.register('remove-tag')
 @SagemakerEndpointConfig.action_registry.register('remove-tag')
 @NotebookInstance.action_registry.register('remove-tag')
+@SagemakerJob.action_registry.register('remove-tag')
 class RemoveTagNotebookInstance(RemoveTag):
     """Remove tag(s) from SageMaker resources
     (notebook-instance, endpoint, endpoint-config)
@@ -354,6 +352,14 @@ class RemoveTagNotebookInstance(RemoveTag):
 
               - name: sagemaker-endpoint-config-remove-tag
                 resource: sagemaker-endpoint-config
+                filters:
+                  - "tag:expired-tag": present
+                actions:
+                  - type: remove-tag
+                    tags: ["expired-tag"]
+
+              - name: sagemaker-job-remove-tag
+                resource: sagemaker-job
                 filters:
                   - "tag:expired-tag": present
                 actions:
