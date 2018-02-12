@@ -86,26 +86,26 @@ class SagemakerJob(QueryResourceManager):
                 {'StatusEquals': 'InProgress'}]))
 
     def resources(self, query=None):
-        q = self.query_filter()
+        q = self.resource_query()
         if q is not None:
             query = query or {}
             for i in range(0, len(q)):
                 query[q[i]['Name']] = q[i]['Value']
         return super(SagemakerJob, self).resources(query=query)
 
-    def query_filter(self):
+    def resource_query(self):
         result = []
         names = set()
         for q in self.queries:
-            query_filter = q.query()
-            if query_filter['Name'] in names:
+            query_data = q.query()
+            if query_data['Name'] in names:
                 self.log.info("Cannot filter multiple times on the same key.")
                 continue
             else:
-                names.add(query_filter['Name'])
-                if isinstance(query_filter['Value'], list):
-                    query_filter['Value'] = query_filter['Value'][0]
-                result.append(query_filter)
+                names.add(query_data['Name'])
+                if isinstance(query_data['Value'], list):
+                    query_data['Value'] = query_data['Value'][0]
+                result.append(query_data)
         if 'StatusEquals' not in names:
             # include default query
             result.append({'Name': 'StatusEquals', 'Value': 'InProgress'})
@@ -135,6 +135,10 @@ class QueryFilter(object):
             if not isinstance(d, dict):
                 raise ValueError(
                     "Training-Job Query Filter Invalid structure %s" % d)
+            for k, v in d.iteritems():
+                if isinstance(v, list):
+                    raise ValueError(
+                        'Training-job query filter invalid structure %s' % v)
             results.append(cls(d).validate())
         return results
 
@@ -166,7 +170,6 @@ class QueryFilter(object):
         value = self.value
         if isinstance(self.value, six.string_types):
             value = [self.value]
-
         return {'Name': self.key, 'Value': value}
 
 
