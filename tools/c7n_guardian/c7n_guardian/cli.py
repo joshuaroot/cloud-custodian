@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import logging
 import operator
 
@@ -20,8 +21,9 @@ from concurrent.futures import as_completed
 import click
 from tabulate import tabulate
 
-from c7n.credentials import assumed_session
-from c7n.utils import format_event
+from c7n.credentials import assumed_session, SessionFactory
+from c7n.utils import format_event, chunks
+
 from c7n_org.cli import init, filter_accounts, CONFIG_SCHEMA, WORKER_COUNT
 
 log = logging.getLogger('c7n-guardian')
@@ -44,12 +46,17 @@ def cli():
 @click.option('-a', '--accounts', multiple=True, default=None)
 @click.option('--master', help='Master account id or name')
 @click.option('--debug', help='Run single-threaded', is_flag=True)
-def report(config, tags, accounts, master, debug):
+@click.option('--region', default='us-east-1')
+def report(config, tags, accounts, master, debug, region):
     """report on guard duty enablement by account"""
     accounts_config, master_info, executor = guardian_init(
         config, debug, master, accounts, tags)
 
-    session = assumed_session(master_info['role'], 'c7n-guardian')
+    session = get_session(
+        master_info.get('role'), 'c7n-guardian',
+        master_info.get('profile'),
+        region)
+
     client = session.client('guardduty')
     detector_id = get_or_create_detector_id(client)
 
@@ -67,7 +74,7 @@ def report(config, tags, accounts, master, debug):
             ar['member'] = False
             ar['status'] = None
             ar['invited'] = None
-            ar['updated'] = None
+            ar['updated'] = datetime.datetime.now().isoformat()
             continue
         m = members[a['account_id']]
         ar['status'] = m['RelationshipStatus']
@@ -93,8 +100,9 @@ def report(config, tags, accounts, master, debug):
               is_flag=True)
 @click.option('--dissociate', help='Disassociate member account',
               is_flag=True)
+@click.option('--region')
 def disable(config, tags, accounts, master, debug,
-            suspend, disable_detector, delete_detector, dissociate):
+            suspend, disable_detector, delete_detector, dissociate, region):
     """suspend guard duty in the given accounts."""
     accounts_config, master_info, executor = guardian_init(
         config, debug, master, accounts, tags)
@@ -104,7 +112,9 @@ def disable(config, tags, accounts, master, debug,
             "One and only of suspend, disable-detector, dissociate"
             "can be specified."))
 
-    master_session = assumed_session(master_info['role'], 'c7n-guardian')
+    master_session = get_session(
+        master_info['role'], 'c7n-guardian',
+        master_info.get('profile'), region)
     master_client = master_session.client('guardduty')
     detector_id = get_or_create_detector_id(master_client)
 
@@ -131,7 +141,10 @@ def disable(config, tags, accounts, master, debug,
     # delete the detector (member), disable the detector (master or member),
     # or disassociate members, or from member disassociate from master.
     for a in accounts_config['accounts']:
-        member_session = assumed_session(master_info['role'], 'c7n-guardian')
+        member_session = get_session(
+            a['role'], 'c7n-guardian',
+            a.get('profile'), region)
+
         member_client = member_session.client('guardduty')
         m_detector_id = get_or_create_detector_id(member_client)
         if disable_detector:
@@ -152,6 +165,14 @@ def disable(config, tags, accounts, master, debug,
             log.info("Deleted detector in account:%s", a['name'])
 
 
+def get_session(role, session_name, profile, region):
+
+    if role:
+        return assumed_session(role, session_name, region=region)
+    else:
+        return SessionFactory(region, profile)()
+
+
 @cli.command()
 @click.option('-c', '--config', required=True, help="Accounts config file", type=click.Path())
 @click.option('--master', help='Master account id or name')
@@ -165,7 +186,11 @@ def enable(config, master, tags, accounts, debug, message, region):
     accounts_config, master_info, executor = guardian_init(
         config, debug, master, accounts, tags)
 
-    master_session = assumed_session(master_info['role'], 'c7n-guardian', region=region)
+    master_session = get_session(
+        master_info.get('role'), 'c7n-guardian',
+        master_info.get('profile'),
+        region=region)
+
     master_client = master_session.client('guardduty')
     detector_id = get_or_create_detector_id(master_client)
 
@@ -196,15 +221,17 @@ def enable(config, master, tags, accounts, debug, message, region):
             log.info("All accounts already enabled")
         return
 
-    if (len(members) + len(extant_ids)) > 100:
+    if (len(members) + len(extant_ids)) > 1000:
         raise ValueError(
-            "Guard Duty only supports 100 member accounts per master account")
+            "Guard Duty only supports 1000 member accounts per master account")
 
     log.info("Enrolling %d accounts in guard duty" % len(members))
 
-    log.info("Creating member accounts")
-    unprocessed = master_client.create_members(
-        DetectorId=detector_id, AccountDetails=members).get('UnprocessedAccounts')
+    log.info("Creating member accounts:%d region:%s", len(members), region)
+    unprocessed = []
+    for account_set in chunks(members, 25):
+        unprocessed.extend(master_client.create_members(
+            DetectorId=detector_id, AccountDetails=account_set).get('UnprocessedAccounts', []))
     if unprocessed:
         log.warning("Following accounts where unprocessed\n %s" % format_event(unprocessed))
 
@@ -222,6 +249,8 @@ def enable(config, master, tags, accounts, debug, message, region):
         for a in accounts_config['accounts']:
             if a == master_info:
                 continue
+            if a['account_id'] in extant_ids:
+                continue
             futures[w.submit(enable_account, a, master_info['account_id'], region)] = a
 
         for f in as_completed(futures):
@@ -235,8 +264,10 @@ def enable(config, master, tags, accounts, debug, message, region):
 
 
 def enable_account(account, master_account_id, region):
-    member_session = assumed_session(
-        account['role'], 'c7n-guardian', region=region)
+    member_session = get_session(
+        account.get('role'), 'c7n-guardian',
+        profile=account.get('profile'),
+        region=region)
     member_client = member_session.client('guardduty')
     m_detector_id = get_or_create_detector_id(member_client)
     invitations = [
@@ -244,7 +275,9 @@ def enable_account(account, master_account_id, region):
         if i['AccountId'] == master_account_id]
     invitations.sort(key=operator.itemgetter('InvitedAt'))
     if not invitations:
-        log.warning("No guard duty invitation found for %s id:%s" (account['name']))
+        log.warning(
+            "No guard duty invitation found account:%s region%s id:%s aid:%s",
+            account['name'], region, m_detector_id, account['account_id'])
         return
     member_client.accept_invitation(
         DetectorId=m_detector_id,

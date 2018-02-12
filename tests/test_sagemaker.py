@@ -15,6 +15,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from .common import BaseTest
 
+import botocore.exceptions as b_exc
+
 
 class TestNotebookInstance(BaseTest):
     def test_list_notebook_instances(self):
@@ -157,6 +159,117 @@ class TestNotebookInstance(BaseTest):
         self.assertTrue(notebook['NotebookInstanceStatus'], 'Deleting')
 
 
+class TestModelInstance(BaseTest):
+    def test_list_model(self):
+        session_factory = self.replay_flight_data(
+            'test_sagemaker_model')
+        p = self.load_policy({
+            'name': 'list-sagemaker-model',
+            'resource': 'sagemaker-model'
+        }, session_factory=session_factory)
+        resources = p.run()
+        self.assertGreaterEqual(len(resources), 1)
+
+    def test_delete_model(self):
+        session_factory = self.replay_flight_data(
+            'test_sagemaker_delete_model')
+        p = self.load_policy({
+            'name': 'delete-invalid-sagemaker-model',
+            'resource': 'sagemaker-model',
+            'filters': [
+                {'tag:DeleteMe': 'present'}],
+            'actions': [{'type': 'delete'}]}, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+
+        client = session_factory().client('sagemaker')
+        try:
+            model = client.describe_model(
+                ModelName=resources[0]['ModelName'])
+        except b_exc.ClientError as e:
+            if e.response['Error']['Code'] != 'ValidationException':
+                self.fail('Bad Error:' + e.response['Error']['Code'])
+            else:
+                self.assertEqual(e.response['Error']['Code'], 'ValidationException')
+        else:
+            self.fail('Resource still exists')
+
+    def test_tag_model(self):
+        session_factory = self.replay_flight_data(
+            'test_sagemaker_tag_model')
+        p = self.load_policy({
+            'name': 'tag-sagemaker-model',
+            'resource': 'sagemaker-model',
+            'filters': [{
+                'tag:Category': 'absent'}],
+            'actions': [{
+                'type': 'tag',
+                'key': 'Category',
+                'value': 'TestValue'}]
+        }, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+
+        client = session_factory().client('sagemaker')
+        tags = client.list_tags(
+            ResourceArn=resources[0]['ModelArn'])['Tags']
+        self.assertEqual(tags[0]['Value'], 'TestValue')
+
+    def test_remove_tag_model(self):
+        session_factory = self.replay_flight_data(
+            'test_sagemaker_remove_tag_model')
+        p = self.load_policy({
+            'name': 'untag-sagemaker-model',
+            'resource': 'sagemaker-model',
+            'filters': [{
+                'tag:Category': 'TestValue'}],
+            'actions': [{
+                'type': 'remove-tag',
+                'tags': ['Category']}]
+        }, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+
+        client = session_factory().client('sagemaker')
+        tags = client.list_tags(
+            ResourceArn=resources[0]['ModelArn'])['Tags']
+        self.assertEqual(len(tags), 0)
+
+    def test_model_mark_for_op(self):
+        session_factory = self.replay_flight_data(
+            'test_model_mark_for_op')
+        p = self.load_policy({
+            'name': 'mark-failed-model-delete',
+            'resource': 'sagemaker-model',
+            'filters': [{'tag:OpMe': 'present'}],
+            'actions': [{
+                'type': 'mark-for-op',
+                'tag': 'custodian_cleanup',
+                'op': 'delete',
+                'days': 1}]
+        }, session_factory=session_factory)
+        resources = p.run()
+        self.assertTrue(len(resources), 1)
+        client = session_factory(region='us-east-1').client('sagemaker')
+        tags = client.list_tags(
+            ResourceArn=resources[0]['ModelArn'])['Tags']
+        self.assertTrue(tags[0], 'custodian_cleanup')
+
+    def test_model_marked_for_op(self):
+        session_factory = self.replay_flight_data(
+            'test_model_marked_for_op')
+        p = self.load_policy({
+            'name': 'marked-failed-endpoints-delete',
+            'resource': 'sagemaker-model',
+            'filters': [{
+                'type': 'marked-for-op',
+                'tag': 'custodian_cleanup',
+                'op': 'delete',
+                'skew': 1}]
+        }, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+    
 class TestSagemakerJob(BaseTest):
 
     def test_sagemaker_training_job_query(self):

@@ -399,7 +399,33 @@ class LambdaMode(PolicyExecutionMode):
             super(LambdaMode, self).get_metrics(start, end, period))
         return values
 
+    def get_member_account_id(self, event):
+        return event.get('account')
+
+    def get_member_region(self, event):
+        return event.get('region')
+
+    def assume_member(self, event):
+        # if a member role is defined we're being run out of the master, and we need
+        # to assume back into the member for policy execution.
+        member_role = self.policy.data['mode'].get('member-role')
+        member_id = self.get_member_account_id(event)
+        region = self.get_member_region(event)
+        if member_role and member_id and region:
+            # In the master account we might be multiplexing a hot lambda across
+            # multiple member accounts for each event/invocation.
+            member_role = member_role.format(account_id=member_id)
+            utils.reset_session_cache()
+            self.policy.options['account_id'] = member_id
+            self.policy.session_factory.region = region
+            self.policy.session_factory.assume_role = member_role
+            self.policy.log.info(
+                "Assuming member role: %s", member_role)
+            return True
+        return False
+
     def resolve_resources(self, event):
+        self.assume_member(event)
         mode = self.policy.data.get('mode', {})
         resource_ids = CloudWatchEvents.get_ids(event, mode)
         if resource_ids is None:
@@ -559,11 +585,15 @@ class GuardDutyMode(LambdaMode):
     supported_resources = ('account', 'ec2', 'iam-user')
 
     id_exprs = {
-        'account': jmespath.compile('account'),
+        'account': jmespath.compile('detail.accountId'),
         'ec2': jmespath.compile('detail.resource.instanceDetails.instanceId'),
         'iam-user': jmespath.compile('detail.resource.accessKeyDetails.userName')}
 
+    def get_member_account_id(self, event):
+        return event['detail']['accountId']
+
     def resolve_resources(self, event):
+        self.assume_member(event)
         rid = self.id_exprs[self.policy.resource_type].search(event)
         resources = self.policy.resource_manager.get_resources([rid])
         # For iam users annotate with the access key specified in the finding event
