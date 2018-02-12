@@ -135,7 +135,7 @@ class QueryFilter(object):
             if not isinstance(d, dict):
                 raise ValueError(
                     "Training-Job Query Filter Invalid structure %s" % d)
-            for k, v in d.iteritems():
+            for k, v in d.items():
                 if isinstance(v, list):
                     raise ValueError(
                         'Training-job query filter invalid structure %s' % v)
