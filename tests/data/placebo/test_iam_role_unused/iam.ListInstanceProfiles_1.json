@@ -16,109 +16,6 @@
         }, 
         "InstanceProfiles": [
             {
-                "InstanceProfileId": "AIPAJCDV4XQRG5WLIXYXE", 
-                "Roles": [], 
-                "CreateDate": {
-                    "hour": 16, 
-                    "__class__": "datetime", 
-                    "month": 11, 
-                    "second": 46, 
-                    "microsecond": 0, 
-                    "year": 2017, 
-                    "day": 6, 
-                    "minute": 29
-                }, 
-                "InstanceProfileName": "aws-opsworks-cm-ec2-role", 
-                "Path": "/", 
-                "Arn": "arn:aws:iam::644160558196:instance-profile/aws-opsworks-cm-ec2-role"
-            }, 
-            {
-                "InstanceProfileId": "AIPAIXP3SDSTK74YRRIBU", 
-                "Roles": [], 
-                "CreateDate": {
-                    "hour": 16, 
-                    "__class__": "datetime", 
-                    "month": 11, 
-                    "second": 54, 
-                    "microsecond": 0, 
-                    "year": 2017, 
-                    "day": 6, 
-                    "minute": 29
-                }, 
-                "InstanceProfileName": "aws-opsworks-cm-ec2-role.1509985794097", 
-                "Path": "/", 
-                "Arn": "arn:aws:iam::644160558196:instance-profile/aws-opsworks-cm-ec2-role.1509985794097"
-            }, 
-            {
-                "InstanceProfileId": "AIPAJZ2UV4D7S4BXHBKEE", 
-                "Roles": [], 
-                "CreateDate": {
-                    "hour": 15, 
-                    "__class__": "datetime", 
-                    "month": 11, 
-                    "second": 34, 
-                    "microsecond": 0, 
-                    "year": 2017, 
-                    "day": 6, 
-                    "minute": 32
-                }, 
-                "InstanceProfileName": "aws-opsworks-ec2-role", 
-                "Path": "/", 
-                "Arn": "arn:aws:iam::644160558196:instance-profile/aws-opsworks-ec2-role"
-            }, 
-            {
-                "InstanceProfileId": "AIPAJO5EMJ3YEMNUF5ZWM", 
-                "Roles": [
-                    {
-                        "AssumeRolePolicyDocument": "%7B%22Version%22%3A%222012-10-17%22%2C%22Statement%22%3A%5B%7B%22Effect%22%3A%22Allow%22%2C%22Principal%22%3A%7B%22AWS%22%3A%5B%22arn%3Aaws%3Aiam%3A%3A644160558196%3Auser%2Fkapil%22%2C%22arn%3Aaws%3Aiam%3A%3A644160558196%3Aroot%22%5D%7D%2C%22Action%22%3A%22sts%3AAssumeRole%22%7D%5D%7D", 
-                        "RoleId": "AROAI7ZS26HIW5UKQGHRM", 
-                        "CreateDate": {
-                            "hour": 19, 
-                            "__class__": "datetime", 
-                            "month": 10, 
-                            "second": 43, 
-                            "microsecond": 0, 
-                            "year": 2016, 
-                            "day": 29, 
-                            "minute": 39
-                        }, 
-                        "RoleName": "CloudCustodianRole", 
-                        "Path": "/", 
-                        "Arn": "arn:aws:iam::644160558196:role/CloudCustodianRole"
-                    }
-                ], 
-                "CreateDate": {
-                    "hour": 19, 
-                    "__class__": "datetime", 
-                    "month": 10, 
-                    "second": 43, 
-                    "microsecond": 0, 
-                    "year": 2016, 
-                    "day": 29, 
-                    "minute": 39
-                }, 
-                "InstanceProfileName": "CloudCustodianRole", 
-                "Path": "/", 
-                "Arn": "arn:aws:iam::644160558196:instance-profile/CloudCustodianRole"
-            }, 
-            {
-                "InstanceProfileId": "AIPAJ3WBLW74XSP4GE77A", 
-                "Roles": [], 
-                "CreateDate": {
-                    "hour": 15, 
-                    "__class__": "datetime", 
-                    "month": 11, 
-                    "second": 28, 
-                    "microsecond": 0, 
-                    "year": 2017, 
-                    "day": 9, 
-                    "minute": 30
-                }, 
-                "InstanceProfileName": "DataPipelineDefaultResourceRole", 
-                "Path": "/", 
-                "Arn": "arn:aws:iam::644160558196:instance-profile/DataPipelineDefaultResourceRole"
-            }, 
-            {
                 "InstanceProfileId": "AIPAJJOHXXHTHDZB5BVFE", 
                 "Roles": [
                     {
@@ -152,42 +49,7 @@
                 "InstanceProfileName": "ecsInstanceRole", 
                 "Path": "/", 
                 "Arn": "arn:aws:iam::644160558196:instance-profile/ecsInstanceRole"
-            }, 
-            {
-                "InstanceProfileId": "AIPAJR4ZAYIIYLZTJU6RG", 
-                "Roles": [
-                    {
-                        "AssumeRolePolicyDocument": "%7B%22Version%22%3A%222012-10-17%22%2C%22Statement%22%3A%5B%7B%22Effect%22%3A%22Allow%22%2C%22Principal%22%3A%7B%22Service%22%3A%5B%22ec2.amazonaws.com%22%2C%22sns.amazonaws.com%22%5D%7D%2C%22Action%22%3A%22sts%3AAssumeRole%22%7D%2C%7B%22Effect%22%3A%22Allow%22%2C%22Principal%22%3A%7B%22AWS%22%3A%5B%22arn%3Aaws%3Aiam%3A%3A644160558196%3Auser%2Fkapil%22%2C%22arn%3Aaws%3Aiam%3A%3A644160558196%3Aroot%22%5D%7D%2C%22Action%22%3A%22sts%3AAssumeRole%22%7D%5D%7D", 
-                        "RoleId": "AROAJ4VMUPRSWMMW6EQIY", 
-                        "CreateDate": {
-                            "hour": 1, 
-                            "__class__": "datetime", 
-                            "month": 9, 
-                            "second": 56, 
-                            "microsecond": 0, 
-                            "year": 2016, 
-                            "day": 23, 
-                            "minute": 56
-                        }, 
-                        "RoleName": "mandeep", 
-                        "Path": "/", 
-                        "Arn": "arn:aws:iam::644160558196:role/mandeep"
-                    }
-                ], 
-                "CreateDate": {
-                    "hour": 1, 
-                    "__class__": "datetime", 
-                    "month": 9, 
-                    "second": 56, 
-                    "microsecond": 0, 
-                    "year": 2016, 
-                    "day": 23, 
-                    "minute": 56
-                }, 
-                "InstanceProfileName": "mandeep", 
-                "Path": "/", 
-                "Arn": "arn:aws:iam::644160558196:instance-profile/mandeep"
-            }, 
+            },
             {
                 "InstanceProfileId": "AIPAJBGQEL7545WR7UQ52", 
                 "Roles": [
@@ -257,41 +119,6 @@
                 "InstanceProfileName": "s3-replication", 
                 "Path": "/", 
                 "Arn": "arn:aws:iam::644160558196:instance-profile/s3-replication"
-            }, 
-            {
-                "InstanceProfileId": "AIPAIBZGUJ5B2RKN4MCAI", 
-                "Roles": [
-                    {
-                        "AssumeRolePolicyDocument": "%7B%22Version%22%3A%222012-10-17%22%2C%22Statement%22%3A%5B%7B%22Effect%22%3A%22Allow%22%2C%22Principal%22%3A%7B%22Service%22%3A%22ec2.amazonaws.com%22%7D%2C%22Action%22%3A%22sts%3AAssumeRole%22%7D%5D%7D", 
-                        "RoleId": "AROAJDY3QFKYIRGHQYCP4", 
-                        "CreateDate": {
-                            "hour": 1, 
-                            "__class__": "datetime", 
-                            "month": 12, 
-                            "second": 33, 
-                            "microsecond": 0, 
-                            "year": 2016, 
-                            "day": 12, 
-                            "minute": 57
-                        }, 
-                        "RoleName": "TestProductionInstanceProfile", 
-                        "Path": "/", 
-                        "Arn": "arn:aws:iam::644160558196:role/TestProductionInstanceProfile"
-                    }
-                ], 
-                "CreateDate": {
-                    "hour": 1, 
-                    "__class__": "datetime", 
-                    "month": 12, 
-                    "second": 33, 
-                    "microsecond": 0, 
-                    "year": 2016, 
-                    "day": 12, 
-                    "minute": 57
-                }, 
-                "InstanceProfileName": "TestProductionInstanceProfile", 
-                "Path": "/", 
-                "Arn": "arn:aws:iam::644160558196:instance-profile/TestProductionInstanceProfile"
             }
         ]
     }
