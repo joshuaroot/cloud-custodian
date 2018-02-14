@@ -223,10 +223,8 @@ class IamRoleUsage(Filter):
 
     def scan_asg_roles(self):
         manager = self.manager.get_resource_manager('launch-config')
-        results = []
-        for e in manager.resources():
-            results.append(e.get('IamInstanceProfile', None))
-        return filter(None, results)
+        return [r['IamInstanceProfile'] for r in manager.resources() if (
+            'IamInstanceProfile' in r)]
 
     def scan_ec2_roles(self):
         manager = self.manager.get_resource_manager('ec2')
@@ -238,6 +236,7 @@ class IamRoleUsage(Filter):
             profile_arn = e.get('IamInstanceProfile', {}).get('Arn', None)
             if not profile_arn:
                 continue
+            # split arn to get the profile name
             results.append(profile_arn.split('/')[-1])
         return results
 
@@ -248,7 +247,7 @@ class IamRoleUsage(Filter):
 
 @Role.filter_registry.register('used')
 class UsedIamRole(IamRoleUsage):
-    """Filter IAM roles that are currently being used
+    """Filter IAM roles that are either being used or not
 
     :example:
 
@@ -278,7 +277,7 @@ class UsedIamRole(IamRoleUsage):
 
 @Role.filter_registry.register('unused')
 class UnusedIamRole(IamRoleUsage):
-    """Filter IAM roles that are currently not used
+    """Filter IAM roles that are either being used or not
 
     This filter has been deprecated. Please use the 'used' filter
     with the 'state' attribute to get unused iam roles
@@ -291,15 +290,13 @@ class UnusedIamRole(IamRoleUsage):
           - name: iam-roles-not-in-use
             resource: iam-role
             filters:
-              - type: unused
+              - type: used
+                state: false
     """
 
     schema = type_schema('unused')
 
     def process(self, resources, event=None):
-        self.log.warning(
-            "[Deprecated] The 'unused' filter for 'iam-role' is deprecated and "
-            "will be removed in a future version.")
         return UsedIamRole({'state': False}, self.manager).process(resources)
 
 
