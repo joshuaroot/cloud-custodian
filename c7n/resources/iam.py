@@ -268,11 +268,11 @@ class UsedIamRole(IamRoleUsage):
     def process(self, resources, event=None):
         roles = self.service_role_usage()
         if self.data.get('state', True):
-            return [r for r in resources if (r['Arn'] in roles
-                                             or r['RoleName'] in roles)]
+            return [r for r in resources if (
+                r['Arn'] in roles or r['RoleName'] in roles)]
 
-        return [r for r in resources if (r['Arn'] not in roles
-                                         and r['RoleName'] not in roles)]
+        return [r for r in resources if (
+            r['Arn'] not in roles and r['RoleName'] not in roles)]
 
 
 @Role.filter_registry.register('unused')
