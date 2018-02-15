@@ -915,6 +915,19 @@ class EnableDataEvents(BaseAction):
 
 @filters.register('shield-enabled')
 class ShieldEnabled(Filter):
+    """Report whether account has Shield enabled
+
+    :example:
+
+    .. code-block:: yaml
+
+        policies:
+          - name: account-with-shield-disabled
+            resource: account
+            filters:
+              - type: shield-enabled
+                state: false
+    """
 
     permissions = ('shield:DescribeSubscription',)
 
@@ -944,7 +957,22 @@ class ShieldEnabled(Filter):
 
 @actions.register('set-shield-advanced')
 class SetShieldAdvanced(BaseAction):
-    """Enable/disable Shield Advanced on an account."""
+    """Enable/disable Shield Advanced on an account.
+
+    :example:
+
+    .. code-block:: yaml
+
+        policies:
+          - name: enable-shield
+            resource: account
+            filters:
+              - type: shield-enabled
+                state: false
+            actions:
+              - type: set-shield-advanced
+                state: true
+    """
 
     permissions = (
         'shield:CreateSubscription', 'shield:DeleteSubscription')
