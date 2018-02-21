@@ -90,7 +90,7 @@ class SagemakerJob(QueryResourceManager):
             if q is None:
                 continue
             query = query or {}
-            for k, v in q.iteritems():
+            for k, v in q.items():
                 query[k] = v
             return super(SagemakerJob, self).resources(query=query)
 
