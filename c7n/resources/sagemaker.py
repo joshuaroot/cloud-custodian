@@ -86,30 +86,13 @@ class SagemakerJob(QueryResourceManager):
                 {'StatusEquals': 'InProgress'}]))
 
     def resources(self, query=None):
-        q = self.resource_query()
-        if q is not None:
-            query = query or {}
-            for i in range(0, len(q)):
-                query[q[i]['Name']] = q[i]['Value']
-        return super(SagemakerJob, self).resources(query=query)
-
-    def resource_query(self):
-        result = []
-        names = set()
         for q in self.queries:
-            query_data = q.query()
-            if query_data['Name'] in names:
-                self.log.info("Cannot filter multiple times on the same key.")
+            if q is None:
                 continue
-            else:
-                names.add(query_data['Name'])
-                if isinstance(query_data['Value'], list):
-                    query_data['Value'] = query_data['Value'][0]
-                result.append(query_data)
-        if 'StatusEquals' not in names:
-            # include default query
-            result.append({'Name': 'StatusEquals', 'Value': 'InProgress'})
-        return result
+            query = query or {}
+            for k, v in q.iteritems():
+                query[k] = v
+            return super(SagemakerJob, self).resources(query=query)
 
     def augment(self, jobs):
         client = local_session(self.session_factory).client('sagemaker')
@@ -131,6 +114,7 @@ class QueryFilter(object):
     @classmethod
     def parse(cls, data):
         results = []
+        names = set()
         for d in data:
             if not isinstance(d, dict):
                 raise ValueError(
@@ -139,7 +123,18 @@ class QueryFilter(object):
                 if isinstance(v, list):
                     raise ValueError(
                         'Training-job query filter invalid structure %s' % v)
-            results.append(cls(d).validate())
+            query = cls(d).validate().query()
+            if query['Name'] in names:
+                # Cannot filter multiple times on the same key
+                continue
+            names.add(query['Name'])
+            if isinstance(query['Value'], list):
+                results.append({query['Name']: query['Value'][0]})
+                continue
+            results.append({query['Name']: query['Value']})
+        if 'StatusEquals' not in names:
+            # add default StatusEquals if not included
+            results.append({'Name': 'StatusEquals', 'Value': 'InProgress'})
         return results
 
     def __init__(self, data):
