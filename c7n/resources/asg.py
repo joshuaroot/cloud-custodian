@@ -158,12 +158,12 @@ class LaunchConfigFilter(ValueFilter, LaunchConfigFilterBase):
     .. code-block:: yaml
 
         policies:
-          - name: asg-launch-config-using-image
+          - name: launch-configs-with-public-address
             resource: asg
             filters:
               - type: launch-config
-                key: ImageId
-                value: ami-2323a2ab
+                key: AssociatePublicIpAddress
+                value: true
     """
     schema = type_schema(
         'launch-config', rinherit=ValueFilter.schema)
