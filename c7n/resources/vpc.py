@@ -241,6 +241,80 @@ class AttributesFilter(Filter):
         return results
 
 
+@Vpc.filter_registry.register('dhcp-options')
+class DhcpOptionsFilter(Filter):
+    """Filter VPCs based on their dhcp options
+
+    """
+    schema = type_schema(
+        'dhcp-options',
+        domainname={'type': 'array', 'items': {'type': 'string'}},
+        nameserver={'type': 'array', 'items': {'type': 'string'}},
+        ntpserver={'type': 'array', 'items': {'type': 'string'}})
+    permissions = ('ec2:DescribeDhcpOptions',)
+
+    def validate(self):
+        if not any(p in self.data for p in (
+                'domainname', 'nameserver', 'ntpserver')):
+            raise FilterValidationError(
+                'at least one parameter must be provided')
+
+        if ('domainname' in self.data and
+                not isinstance(self.data.get('domainname'), list)):
+            raise FilterValidationError('domainname must be a list')
+        if ('nameserver' in self.data and
+                not isinstance(self.data.get('nameserver'), list)):
+            raise FilterValidationError('nameserver must be a list')
+        if ('ntpserver' in self.data and
+                not isinstance(self.data.get('ntpserver'), list)):
+            raise FilterValidationError('ntpserver must be a list')
+
+    def process(self, resources, event=None):
+        dmn = self.data.get('domainname', [])
+        dns = self.data.get('nameserver', [])
+        ntp = self.data.get('ntpserver', [])
+        client = local_session(self.manager.session_factory).client('ec2')
+        results = []
+        for r in resources:
+            options = client.describe_dhcp_options(
+                DhcpOptionsIds=[r['DhcpOptionsId']])[
+                'DhcpOptions'][0]['DhcpConfigurations']
+            if not options:
+                continue
+
+            d_names, n_svr, t_svr = ([] for i in range(3))
+            for o in options:
+                if o['Key'] == 'domain-name':
+                    d_names = [v['Value'] for v in o['Values']]
+                if o['Key'] == 'domain-name-servers':
+                    n_svr = [v['Value'] for v in o['Values']]
+                if o['Key'] == 'ntp-servers':
+                    t_svr = [v['Value'] for v in o['Values']]
+
+            if dmn and dns and ntp:
+                if dmn == d_names and dns == n_svr and ntp == t_svr:
+                    results.append(r)
+            elif dmn and dns and not ntp:
+                if dmn == d_names and dns == n_svr:
+                    results.append(r)
+            elif dmn and not dns and ntp:
+                if dmn == d_names and ntp == t_svr:
+                    results.append(r)
+            elif dmn and not dns and not ntp:
+                if dmn == d_names:
+                    results.append(r)
+            elif not dmn and dns and ntp:
+                if dns == n_svr and ntp == t_svr:
+                    results.append(r)
+            elif not dmn and dns and not ntp:
+                if dns == n_svr:
+                    results.append(r)
+            elif not dmn and not dns and ntp:
+                if ntp == t_svr:
+                    results.append(r)
+        return results
+
+
 @resources.register('subnet')
 class Subnet(query.QueryResourceManager):
 

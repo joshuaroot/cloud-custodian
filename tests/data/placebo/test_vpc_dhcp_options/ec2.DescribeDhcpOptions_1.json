@@ -1,0 +1,46 @@
+{
+    "status_code": 200, 
+    "data": {
+        "DhcpOptions": [
+            {
+                "Tags": [
+                    {
+                        "Value": "AmazonDefault", 
+                        "Key": "Name"
+                    }
+                ], 
+                "DhcpConfigurations": [
+                    {
+                        "Values": [
+                            {
+                                "Value": "ec2.internal"
+                            }
+                        ], 
+                        "Key": "domain-name"
+                    }, 
+                    {
+                        "Values": [
+                            {
+                                "Value": "AmazonProvidedDNS"
+                            }
+                        ], 
+                        "Key": "domain-name-servers"
+                    }
+                ], 
+                "DhcpOptionsId": "dopt-24ff1940"
+            }
+        ], 
+        "ResponseMetadata": {
+            "RetryAttempts": 0, 
+            "HTTPStatusCode": 200, 
+            "RequestId": "16a1cbfd-cef0-468e-9a4e-5d9bde5a406c", 
+            "HTTPHeaders": {
+                "transfer-encoding": "chunked", 
+                "vary": "Accept-Encoding", 
+                "server": "AmazonEC2", 
+                "content-type": "text/xml;charset=UTF-8", 
+                "date": "Thu, 01 Mar 2018 16:50:06 GMT"
+            }
+        }
+    }
+}
