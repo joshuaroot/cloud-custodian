@@ -15,6 +15,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from .common import BaseTest, functional, event_data
 from c7n.filters import FilterValidationError
+from c7n.resources.vpc import DhcpOptionsFilter
+from c7n.executor import MainThreadExecutor
 
 
 class VpcTest(BaseTest):

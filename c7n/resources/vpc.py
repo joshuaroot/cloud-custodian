@@ -245,12 +245,32 @@ class AttributesFilter(Filter):
 class DhcpOptionsFilter(Filter):
     """Filter VPCs based on their dhcp options
 
+    :example:
+
+    .. code-block: yaml
+
+        - policies:
+            - name: vpcs-in-domain
+              resource: vpc
+              filters:
+                - type: dhcp-options
+                  domainname: ec2.internal
     """
-    schema = type_schema(
-        'dhcp-options',
-        domainname={'type': 'array', 'items': {'type': 'string'}},
-        nameserver={'type': 'array', 'items': {'type': 'string'}},
-        ntpserver={'type': 'array', 'items': {'type': 'string'}})
+    schema = {
+        'type': 'object',
+        'additionalProperties': False,
+        'anyOf': [
+            {'required': ['type', 'domainname']},
+            {'required': ['type', 'nameserver']},
+            {'required': ['type', 'ntpserver']}
+        ],
+        'properties': {
+            'type': {'enum': ['dhcp-options']},
+            'domainname': {'type': 'array', 'items': {'type': 'string'}},
+            'nameserver': {'type': 'array', 'items': {'type': 'string'}},
+            'ntpserver': {'type': 'array', 'items': {'type': 'string'}}
+        }
+    }
     permissions = ('ec2:DescribeDhcpOptions',)
 
     def validate(self):
@@ -268,50 +288,49 @@ class DhcpOptionsFilter(Filter):
         if ('ntpserver' in self.data and
                 not isinstance(self.data.get('ntpserver'), list)):
             raise FilterValidationError('ntpserver must be a list')
+        return self
+
+    def process_vpc(self, r):
+        def _breakout(opt):
+            if opt:
+                return opt[0]
+            return []
+
+        client = local_session(self.manager.session_factory).client('ec2')
+        opts = client.describe_dhcp_options(
+            DhcpOptionsIds=[r['DhcpOptionsId']])['DhcpOptions'][0]
+        r['DhcpConfigurations'] = {
+            'id': opts['DhcpOptionsId'],
+            'domainnames': [], 'nameservers': [], 'ntpservers': []}
+        if self.dmn:
+            r['DhcpConfigurations']['domainnames'] = _breakout([
+                [v['Value'] for v in o['Values']]
+                for o in opts['DhcpConfigurations']
+                if o['Key'] == 'domain-name'])
+        if self.dns:
+            r['DhcpConfigurations']['nameservers'] = _breakout([
+                [v['Value'] for v in o['Values']]
+                for o in opts['DhcpConfigurations']
+                if o['Key'] == 'domain-name-servers'])
+        if self.ntp:
+            r['DhcpConfigurations']['ntpservers'] = _breakout([
+                [v['Value'] for v in o['Values']]
+                for o in opts['DhcpConfigurations']
+                if o['Key'] == 'ntp-servers'])
+        return r
 
     def process(self, resources, event=None):
-        dmn = self.data.get('domainname', [])
-        dns = self.data.get('nameserver', [])
-        ntp = self.data.get('ntpserver', [])
-        client = local_session(self.manager.session_factory).client('ec2')
+        self.dmn = self.data.get('domainname', [])
+        self.dns = self.data.get('nameserver', [])
+        self.ntp = self.data.get('ntpserver', [])
+        with self.executor_factory(max_workers=4) as w:
+            resources = list(filter(None, w.map(self.process_vpc, resources)))
         results = []
         for r in resources:
-            options = client.describe_dhcp_options(
-                DhcpOptionsIds=[r['DhcpOptionsId']])[
-                'DhcpOptions'][0]['DhcpConfigurations']
-            if not options:
-                continue
-
-            d_names, n_svr, t_svr = ([] for i in range(3))
-            for o in options:
-                if o['Key'] == 'domain-name':
-                    d_names = [v['Value'] for v in o['Values']]
-                if o['Key'] == 'domain-name-servers':
-                    n_svr = [v['Value'] for v in o['Values']]
-                if o['Key'] == 'ntp-servers':
-                    t_svr = [v['Value'] for v in o['Values']]
-
-            if dmn and dns and ntp:
-                if dmn == d_names and dns == n_svr and ntp == t_svr:
-                    results.append(r)
-            elif dmn and dns and not ntp:
-                if dmn == d_names and dns == n_svr:
-                    results.append(r)
-            elif dmn and not dns and ntp:
-                if dmn == d_names and ntp == t_svr:
-                    results.append(r)
-            elif dmn and not dns and not ntp:
-                if dmn == d_names:
-                    results.append(r)
-            elif not dmn and dns and ntp:
-                if dns == n_svr and ntp == t_svr:
-                    results.append(r)
-            elif not dmn and dns and not ntp:
-                if dns == n_svr:
-                    results.append(r)
-            elif not dmn and not dns and ntp:
-                if ntp == t_svr:
-                    results.append(r)
+            if (self.dmn == r['DhcpConfigurations']['domainnames'] and
+                    self.dns == r['DhcpConfigurations']['nameservers'] and
+                    self.ntp == r['DhcpConfigurations']['ntpservers']):
+                results.append(r)
         return results
 
 

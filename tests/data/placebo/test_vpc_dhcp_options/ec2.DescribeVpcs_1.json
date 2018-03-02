@@ -3,6 +3,33 @@
     "data": {
         "Vpcs": [
             {
+                "VpcId": "vpc-f1516b97", 
+                "InstanceTenancy": "default", 
+                "Tags": [
+                    {
+                        "Value": "FancyTestVPC", 
+                        "Key": "Name"
+                    }, 
+                    {
+                        "Value": "tagfanncyvalue", 
+                        "Key": "tagfancykey"
+                    }
+                ], 
+                "CidrBlockAssociationSet": [
+                    {
+                        "AssociationId": "vpc-cidr-assoc-98ba93f0", 
+                        "CidrBlock": "10.0.42.0/24", 
+                        "CidrBlockState": {
+                            "State": "associated"
+                        }
+                    }
+                ], 
+                "State": "available", 
+                "DhcpOptionsId": "dopt-24ff1940", 
+                "CidrBlock": "10.0.42.0/24", 
+                "IsDefault": false
+            }, 
+            {
                 "VpcId": "vpc-7af45101", 
                 "InstanceTenancy": "default", 
                 "Tags": [
@@ -24,41 +51,18 @@
                 "DhcpOptionsId": "dopt-4d4c3035", 
                 "CidrBlock": "10.0.16.0/24", 
                 "IsDefault": false
-            }, 
-            {
-                "VpcId": "vpc-d2d616b5", 
-                "InstanceTenancy": "default", 
-                "Tags": [
-                    {
-                        "Value": "Default", 
-                        "Key": "Name"
-                    }
-                ], 
-                "CidrBlockAssociationSet": [
-                    {
-                        "AssociationId": "vpc-cidr-assoc-33669f5a", 
-                        "CidrBlock": "172.31.0.0/16", 
-                        "CidrBlockState": {
-                            "State": "associated"
-                        }
-                    }
-                ], 
-                "State": "available", 
-                "DhcpOptionsId": "dopt-24ff1940", 
-                "CidrBlock": "172.31.0.0/16", 
-                "IsDefault": true
             }
         ], 
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "0a989cd2-6ca8-4e47-b069-c7160c6b3e92", 
+            "RequestId": "c0480c32-0e64-4bf3-8705-1b75af79a294", 
             "HTTPHeaders": {
                 "transfer-encoding": "chunked", 
                 "vary": "Accept-Encoding", 
                 "server": "AmazonEC2", 
                 "content-type": "text/xml;charset=UTF-8", 
-                "date": "Thu, 01 Mar 2018 16:50:05 GMT"
+                "date": "Fri, 02 Mar 2018 15:35:21 GMT"
             }
         }
     }
