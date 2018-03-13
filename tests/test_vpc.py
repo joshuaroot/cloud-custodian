@@ -178,7 +178,8 @@ class VpcTest(BaseTest):
                 'domainname': ['c7n.internal']
             }]}, session_factory=self.session_factory)
         resources = p.run()
-        self.assertEqual(len(resources), 1)
+        self.assertEqual(
+            [len(resources), resources[0]['VpcId']], [1, 'vpc-7af45101'])
 
 
 class NetworkLocationTest(BaseTest):

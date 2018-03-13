@@ -274,20 +274,14 @@ class DhcpOptionsFilter(Filter):
     permissions = ('ec2:DescribeDhcpOptions',)
 
     def validate(self):
-        if not any(p in self.data for p in (
-                'domainname', 'nameserver', 'ntpserver')):
+        keys = ('domainname', 'nameserver', 'ntpserver')
+        if not any(k in self.data for k in keys):
             raise FilterValidationError(
                 'at least one parameter must be provided')
 
-        if ('domainname' in self.data and
-                not isinstance(self.data.get('domainname'), list)):
-            raise FilterValidationError('domainname must be a list')
-        if ('nameserver' in self.data and
-                not isinstance(self.data.get('nameserver'), list)):
-            raise FilterValidationError('nameserver must be a list')
-        if ('ntpserver' in self.data and
-                not isinstance(self.data.get('ntpserver'), list)):
-            raise FilterValidationError('ntpserver must be a list')
+        for k in keys:
+            if k in self.data and not isinstance(self.data[k], list):
+                raise FilterValidationError('%s must be a list' % k)
         return self
 
     def process_vpc(self, r):
@@ -299,37 +293,36 @@ class DhcpOptionsFilter(Filter):
         client = local_session(self.manager.session_factory).client('ec2')
         opts = client.describe_dhcp_options(
             DhcpOptionsIds=[r['DhcpOptionsId']])['DhcpOptions'][0]
-        r['DhcpConfigurations'] = {
+
+        r['c7n:DhcpConfigurations'] = {
             'id': opts['DhcpOptionsId'],
-            'domainnames': [], 'nameservers': [], 'ntpservers': []}
+            'domainname': [], 'nameserver': [], 'ntpserver': []}
         if self.dmn:
-            r['DhcpConfigurations']['domainnames'] = _breakout([
+            r['c7n:DhcpConfigurations']['domainname'] = _breakout([
                 [v['Value'] for v in o['Values']]
                 for o in opts['DhcpConfigurations']
                 if o['Key'] == 'domain-name'])
         if self.dns:
-            r['DhcpConfigurations']['nameservers'] = _breakout([
+            r['c7n:DhcpConfigurations']['nameserver'] = _breakout([
                 [v['Value'] for v in o['Values']]
                 for o in opts['DhcpConfigurations']
                 if o['Key'] == 'domain-name-servers'])
         if self.ntp:
-            r['DhcpConfigurations']['ntpservers'] = _breakout([
-                [v['Value'] for v in o['Values']]
-                for o in opts['DhcpConfigurations']
-                if o['Key'] == 'ntp-servers'])
+            r['c7n:DhcpConfigurations']['ntpserver'] = _breakout([
+                [v['Value'] for v in o['Values']] for
+                o in opts['DhcpConfigurations'] if o['Key'] == 'ntp-servers'])
         return r
 
     def process(self, resources, event=None):
         self.dmn = self.data.get('domainname', [])
         self.dns = self.data.get('nameserver', [])
         self.ntp = self.data.get('ntpserver', [])
-        with self.executor_factory(max_workers=4) as w:
-            resources = list(filter(None, w.map(self.process_vpc, resources)))
         results = []
         for r in resources:
-            if (self.dmn == r['DhcpConfigurations']['domainnames'] and
-                    self.dns == r['DhcpConfigurations']['nameservers'] and
-                    self.ntp == r['DhcpConfigurations']['ntpservers']):
+            r = self.process_vpc(r)
+            if (self.dmn == r['c7n:DhcpConfigurations']['domainname'] and
+                    self.dns == r['c7n:DhcpConfigurations']['nameserver'] and
+                    self.ntp == r['c7n:DhcpConfigurations']['ntpserver']):
                 results.append(r)
         return results
 
