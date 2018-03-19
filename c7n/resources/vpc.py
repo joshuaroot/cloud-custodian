@@ -285,9 +285,12 @@ class DhcpOptionsFilter(Filter):
         return self
 
     def process_vpc(self, r):
-        def _breakout(opt):
-            if opt:
-                return opt[0]
+        def _collect(k):
+            results = [[v['Value'] for v in o['Values']]
+                       for o in opts['DhcpConfigurations']
+                       if o['Key'] == k]
+            if results:
+                return sorted(results[0])
             return []
 
         client = local_session(self.manager.session_factory).client('ec2')
@@ -296,27 +299,18 @@ class DhcpOptionsFilter(Filter):
 
         r['c7n:DhcpConfigurations'] = {
             'id': opts['DhcpOptionsId'],
-            'domainname': [], 'nameserver': [], 'ntpserver': []}
-        if self.dmn:
-            r['c7n:DhcpConfigurations']['domainname'] = _breakout([
-                [v['Value'] for v in o['Values']]
-                for o in opts['DhcpConfigurations']
-                if o['Key'] == 'domain-name'])
-        if self.dns:
-            r['c7n:DhcpConfigurations']['nameserver'] = _breakout([
-                [v['Value'] for v in o['Values']]
-                for o in opts['DhcpConfigurations']
-                if o['Key'] == 'domain-name-servers'])
-        if self.ntp:
-            r['c7n:DhcpConfigurations']['ntpserver'] = _breakout([
-                [v['Value'] for v in o['Values']] for
-                o in opts['DhcpConfigurations'] if o['Key'] == 'ntp-servers'])
+            'domainname': (_collect('domain-name') if self.dmn
+                           else []),
+            'nameserver': (_collect('domain-name-servers') if self.dns
+                           else []),
+            'ntpserver': (_collect('ntp-servers') if self.ntp
+                          else [])}
         return r
 
     def process(self, resources, event=None):
-        self.dmn = self.data.get('domainname', [])
-        self.dns = self.data.get('nameserver', [])
-        self.ntp = self.data.get('ntpserver', [])
+        self.dmn = sorted(self.data.get('domainname', []))
+        self.dns = sorted(self.data.get('nameserver', []))
+        self.ntp = sorted(self.data.get('ntpserver', []))
         results = []
         for r in resources:
             r = self.process_vpc(r)
