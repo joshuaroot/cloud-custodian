@@ -13,8 +13,6 @@
 # limitations under the License.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from botocore.exceptions import ClientError
-
 from c7n.manager import resources
 from c7n.query import QueryResourceManager
 from c7n.actions import BaseAction
@@ -103,18 +101,15 @@ class DeleteComputeEnvironment(BaseAction):
 
     def delete_environment(self, r):
         client = local_session(self.manager.session_factory).client('batch')
-        try:
-            client.delete_compute_environment(
-                computeEnvironment=r['computeEnvironmentName'])
-        except ClientError as e:
-            if 'set the state to DISABLED' in e.response['Error']['Message']:
-                self.log.exception('Exception while deleting %s: %s' % (
-                    r['computeEnvironmentName'],
-                    e.response['Error']['Message']))
-            else:
-                raise
+        client.delete_compute_environment(
+            computeEnvironment=r['computeEnvironmentName'])
 
     def process(self, resources):
+        orig_length = len(resources)
+        resources = [r for r in resources if r['state'] == 'DISABLED']
+        self.log.info(
+            "%s %d of %d batch-compute environments with state 'DISABLED'" % (
+                self.__class__.__name__, len(resources), orig_length))
         with self.executor_factory(max_workers=2) as w:
             list(w.map(self.delete_environment, resources))
 
