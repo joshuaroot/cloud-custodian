@@ -1,0 +1,21 @@
+{
+    "status_code": 200, 
+    "data": {
+        "computeEnvironmentName": "c7n-batch-test", 
+        "computeEnvironmentArn": "arn:aws:batch:us-east-1:644160558196:compute-environment/c7n-batch-test", 
+        "ResponseMetadata": {
+            "RetryAttempts": 0, 
+            "HTTPStatusCode": 200, 
+            "RequestId": "91aaeee5-2eca-11e8-8c38-5149e7afa477", 
+            "HTTPHeaders": {
+                "x-amzn-requestid": "91aaeee5-2eca-11e8-8c38-5149e7afa477", 
+                "content-length": "141", 
+                "x-amz-apigw-id": "ENjBkHFToAMF4Dw=", 
+                "x-amzn-trace-id": "sampled=0;root=1-5ab54ba3-92ac7fe02d77028efece74b7", 
+                "connection": "keep-alive", 
+                "date": "Fri, 23 Mar 2018 18:46:59 GMT", 
+                "content-type": "application/json"
+            }
+        }
+    }
+}

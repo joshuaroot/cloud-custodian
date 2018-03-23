@@ -13,8 +13,12 @@
 # limitations under the License.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from botocore.exceptions import ClientError
+
 from c7n.manager import resources
 from c7n.query import QueryResourceManager
+from c7n.actions import BaseAction
+from c7n.utils import type_schema, local_session
 
 
 @resources.register('batch-compute')
@@ -28,6 +32,91 @@ class ComputeEnvironment(QueryResourceManager):
         id = name = "computeEnvironmentName"
         enum_spec = (
             'describe_compute_environments', 'computeEnvironments', None)
+
+
+@ComputeEnvironment.action_registry.register('update-environment')
+class UpdateComputeEnvironment(BaseAction):
+    """Updates an AWS batch compute environment
+
+    :example:
+
+    .. code-block: yaml
+
+        policies:
+          - name: update-environments
+            resource: batch-compute
+            filters:
+              - computeResources.desiredvCpus: 0
+              - state: ENABLED
+            actions:
+              - type: disable
+                state: DISABLED
+    """
+    schema = {
+        'type': 'object',
+        'additionalProperties': False,
+        'properties': {
+            'type': {'enum': ['update-environment']},
+            'computeEnvironment': {'type': 'string'},
+            'state': {'type': 'enum', 'items': ['ENABLED', 'DISABLED']},
+            'computeResources': {
+                'type': 'object',
+                'additionalProperties': False,
+                'properties': {
+                    'minvCpus': {'type': 'integer'},
+                    'maxvCpus': {'type': 'integer'},
+                    'desiredvCpus': {'type': 'integer'}
+                }
+            },
+            'serviceRole': {'type': 'string'}
+        }
+    }
+    permissions = ('batch:UpdateComputeEnvironment',)
+
+    def process(self, resources):
+        client = local_session(self.manager.session_factory).client('batch')
+        params = dict(self.data)
+        params.pop('type')
+        for r in resources:
+            params['computeEnvironment'] = r['computeEnvironmentName']
+            client.update_compute_environment(**params)
+
+
+@ComputeEnvironment.action_registry.register('delete')
+class DeleteComputeEnvironment(BaseAction):
+    """Delete an AWS batch compute environment
+
+    :example:
+
+    .. code-block: yaml
+
+        policies:
+          - name: delete-environments
+            resource: batch-compute
+            filters:
+              - computeResources.desiredvCpus: 0
+            action:
+              - type: delete
+    """
+    schema = type_schema('delete')
+    permissions = ('batch:DeleteComputeEnvironment',)
+
+    def delete_environment(self, r):
+        client = local_session(self.manager.session_factory).client('batch')
+        try:
+            client.delete_compute_environment(
+                computeEnvironment=r['computeEnvironmentName'])
+        except ClientError as e:
+            if 'set the state to DISABLED' in e.response['Error']['Message']:
+                self.log.exception('Exception while deleting %s: %s' % (
+                    r['computeEnvironmentName'],
+                    e.response['Error']['Message']))
+            else:
+                raise
+
+    def process(self, resources):
+        with self.executor_factory(max_workers=2) as w:
+            list(w.map(self.delete_environment, resources))
 
 
 @resources.register('batch-definition')

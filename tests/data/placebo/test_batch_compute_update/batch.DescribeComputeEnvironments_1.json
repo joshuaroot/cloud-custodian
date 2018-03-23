@@ -1,0 +1,54 @@
+{
+    "status_code": 200, 
+    "data": {
+        "computeEnvironments": [
+            {
+                "status": "VALID", 
+                "serviceRole": "arn:aws:iam::644160558196:role/service-role/AWSBatchServiceRole", 
+                "computeEnvironmentArn": "arn:aws:batch:us-east-1:644160558196:compute-environment/c7n-batch-test", 
+                "computeResources": {
+                    "subnets": [
+                        "subnet-3a334610", 
+                        "subnet-efbcccb7", 
+                        "subnet-e3b194de", 
+                        "subnet-914763e7"
+                    ], 
+                    "tags": {
+                        "Name": "c7n-batch-test"
+                    }, 
+                    "desiredvCpus": 0, 
+                    "minvCpus": 0, 
+                    "instanceTypes": [
+                        "optimal"
+                    ], 
+                    "securityGroupIds": [
+                        "sg-6c7fa917"
+                    ], 
+                    "instanceRole": "arn:aws:iam::644160558196:instance-profile/root_joshua", 
+                    "maxvCpus": 256, 
+                    "type": "EC2", 
+                    "ec2KeyPair": "temp-keys"
+                }, 
+                "statusReason": "ComputeEnvironment Healthy", 
+                "ecsClusterArn": "arn:aws:ecs:us-east-1:644160558196:cluster/c7n-batch-test_Batch_605fdc8f-31fc-3ddb-877c-b8e6f0b917c9", 
+                "state": "ENABLED", 
+                "computeEnvironmentName": "c7n-batch-test", 
+                "type": "MANAGED"
+            }
+        ], 
+        "ResponseMetadata": {
+            "RetryAttempts": 0, 
+            "HTTPStatusCode": 200, 
+            "RequestId": "91887220-2eca-11e8-9701-1d2f756dd6c4", 
+            "HTTPHeaders": {
+                "x-amzn-requestid": "91887220-2eca-11e8-9701-1d2f756dd6c4", 
+                "content-length": "818", 
+                "x-amz-apigw-id": "ENjBiHw_IAMFTtw=", 
+                "x-amzn-trace-id": "sampled=0;root=1-5ab54ba3-10e71dae97097aa61c853b86", 
+                "connection": "keep-alive", 
+                "date": "Fri, 23 Mar 2018 18:46:59 GMT", 
+                "content-type": "application/json"
+            }
+        }
+    }
+}
