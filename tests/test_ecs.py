@@ -14,8 +14,11 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 
+from botocore.exceptions import ClientError
 from .common import BaseTest
 
+import fnmatch
+import os
 import time
 
 
@@ -123,7 +126,24 @@ class TestEcsTaskDefinition(BaseTest):
             familyPrefix='launch-me',
             status='ACTIVE').get('taskDefinitionArns')
         self.assertEqual(arns, [])
-    
+
+    def test_task_definition_get_resources(self):
+        session_factory = self.replay_flight_data('test_ecs_task_def_query')
+        p = self.load_policy(
+            {'name': 'task-defs',
+             'resource': 'ecs-task-definition'},
+            session_factory=session_factory)
+        arn = "arn:aws:ecs:us-east-1:644160558196:task-definition/ecs-read-only-root:1"
+        resources = p.resource_manager.get_resources([arn])
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['taskDefinitionArn'], arn)
+        self.assertEqual(
+            len(fnmatch.filter(
+                os.listdir(os.path.join(
+                    self.placebo_dir, 'test_ecs_task_def_query')),
+                '*.json')),
+            1)
+
 
 class TestEcsTask(BaseTest):
 
@@ -156,4 +176,45 @@ class TestEcsTask(BaseTest):
 
 
         
+class TestEcsContainerInstance(BaseTest):
+    def test_container_instance_resource(self):
+        session_factory = self.replay_flight_data('test_ecs_container_instance')
+        p = self.load_policy(
+            {'name': 'container-instances',
+             'resource': 'ecs-container-instance'},
+             session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
 
+    def test_container_instance_update_agent(self):
+        session_factory = self.replay_flight_data('test_ecs_container_instance_update_agent')
+        p = self.load_policy(
+            {'name': 'container-instance-update-agent',
+             'resource': 'ecs-container-instance',
+             'actions':[
+                 {'type': 'update-agent'}
+                 ]},
+             session_factory=session_factory)
+        resources = p.run()
+        if self.recording:
+            time.sleep(60)
+        client = session_factory().client('ecs')
+        updated_version = client.describe_container_instances(cluster='default',
+                containerInstances=['a8a469ef-009f-40f8-9639-3a0d9c6a9b9e'])['containerInstances'][0]['versionInfo']['agentVersion']
+        self.assertNotEqual(updated_version, resources[0]['versionInfo']['agentVersion'])
+
+    def test_container_instance_set_state(self):
+        session_factory = self.replay_flight_data('test_ecs_container_instance_set_state')
+        p = self.load_policy(
+            {'name': 'container-instance-update-agent',
+             'resource': 'ecs-container-instance',
+             'actions':[
+                 {'type': 'set-state',
+                     'state': 'DRAINING'}
+                 ]},
+             session_factory=session_factory)
+        resources = p.run()
+        client = session_factory().client('ecs')
+        state = client.describe_container_instances(cluster='default',
+                containerInstances=[resources[0]['containerInstanceArn']])['containerInstances'][0]['status']
+        self.assertEqual(state, 'DRAINING')

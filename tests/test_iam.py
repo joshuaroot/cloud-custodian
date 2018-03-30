@@ -35,7 +35,7 @@ from c7n.resources.iam import (
     UsedIamRole, UnusedIamRole,
     IamGroupUsers, UserPolicy, GroupMembership,
     UserCredentialReport, UserAccessKey,
-    IamRoleInlinePolicy, IamGroupInlinePolicy,
+    IamUserInlinePolicy, IamRoleInlinePolicy, IamGroupInlinePolicy,
     SpecificIamRoleManagedPolicy, NoSpecificIamRoleManagedPolicy)
 from c7n.executor import MainThreadExecutor
 
@@ -170,7 +170,9 @@ class IamRoleFilterUsage(BaseTest):
         p = self.load_policy({
             'name': 'iam-inuse-role',
             'resource': 'iam-role',
-            'filters': ['used']}, session_factory=session_factory)
+            'filters': [{
+                'type': 'used',
+                'state': True}]}, session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 3)
 
@@ -183,7 +185,7 @@ class IamRoleFilterUsage(BaseTest):
             'resource': 'iam-role',
             'filters': ['unused']}, session_factory=session_factory)
         resources = p.run()
-        self.assertEqual(len(resources), 6)
+        self.assertEqual(len(resources), 1)
 
 
 class IamUserTest(BaseTest):
@@ -416,6 +418,49 @@ class IamManagedPolicyUsage(BaseTest):
 
 
 class IamInlinePolicyUsage(BaseTest):
+
+    def test_iam_user_has_inline_policy(self):
+        session_factory = self.replay_flight_data('test_iam_user_has_inline_policy')
+        self.patch(IamUserInlinePolicy, 'executor_factory', MainThreadExecutor)
+        p = self.load_policy({
+            'name': 'iam-user-with-inline-policy',
+            'resource': 'iam-user',
+            'filters': [
+                {'type': 'value',
+                 'key': 'UserName',
+                 'op': 'in',
+                 'value': ['andrewalexander',
+                           'kapil',
+                           'scot@sixfeetup.com']},
+                {'type': 'has-inline-policy',
+                 'value': True}]},
+            session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['UserName'], 'kapil')
+
+    def test_iam_user_no_inline_policy(self):
+        session_factory = self.replay_flight_data('test_iam_user_no_inline_policy')
+        self.patch(IamUserInlinePolicy, 'executor_factory', MainThreadExecutor)
+        p = self.load_policy({
+            'name': 'iam-user-without-inline-policy',
+            'resource': 'iam-user',
+            'filters': [
+                {'type': 'value',
+                 'key': 'UserName',
+                 'op': 'in',
+                 'value': ['andrewalexander',
+                           'kapil',
+                           'scot@sixfeetup.com']},
+                {'type': 'has-inline-policy',
+                 'value': False}
+            ]},
+            session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 2)
+        self.assertEqual(
+            sorted([r['UserName'] for r in resources]),
+            ['andrewalexander', 'scot@sixfeetup.com'])
 
     def test_iam_role_has_inline_policy(self):
         session_factory = self.replay_flight_data(
@@ -730,6 +775,64 @@ class SNSCrossAccount(BaseTest):
         self.assertEqual(len(resources), 1)
         self.assertEqual(resources[0]['TopicArn'], arn)
 
+    @functional
+    def test_sns_cross_account_endpoint_condition(self):
+        self.patch(SNS, 'executor_factory', MainThreadExecutor)
+
+        session_factory = self.replay_flight_data('test_cross_account_sns_endpoint_condition')
+        client = session_factory().client('sns')
+        topic_name = 'c7n-endpoint-condition-test'
+        arn = client.create_topic(Name=topic_name)['TopicArn']
+        self.addCleanup(client.delete_topic, TopicArn=arn)
+
+        policy = {
+            'Id': 'Foo',
+            "Version": "2012-10-17",
+            'Statement': [
+                {'Action': 'SNS:Publish',
+                 'Effect': 'Allow',
+                 'Resource': arn,
+                 'Principal': '*',
+                 'Condition': {
+                      'StringLike': {
+                        'SNS:Endpoint': "@capitalone.com"
+                      },
+                      'StringEquals': {
+                        "AWS:SourceOwner": "644160558196"
+                      }
+                    }
+                }]}
+
+        client.set_topic_attributes(
+            TopicArn=arn, AttributeName='Policy',
+            AttributeValue=json.dumps(policy))
+
+        p = self.load_policy(
+            {'name': 'sns-cross',
+             'resource': 'sns',
+             'filters': [
+                {'TopicArn': arn},
+                'cross-account'
+                ]
+            },
+            session_factory=session_factory)
+
+        resources = p.run()
+        self.assertEqual(len(resources), 0)
+
+        p = self.load_policy(
+            {'name': 'sns-cross',
+             'resource': 'sns',
+             'filters': [
+                {'TopicArn': arn},
+                {'type':'cross-account',
+                 'whitelist_endpoints':['@whitelist.com']}
+                ]
+            },
+            session_factory=session_factory)
+
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
 
 class CrossAccountChecker(TestCase):
 

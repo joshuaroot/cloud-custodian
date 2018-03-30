@@ -134,6 +134,34 @@ def generate(resource_types=()):
     resource_defs = {}
     definitions = {
         'resources': resource_defs,
+        'iam-statement': {
+            'additionalProperties': False,
+            'type': 'object',
+            'properties': {
+                'Sid': {'type': 'string'},
+                'Effect': {'type': 'string', 'enum': ['Allow', 'Deny']},
+                'Principal': {'anyOf': [
+                    {'type': 'string'},
+                    {'type': 'object'}, {'type': 'array'}]},
+                'NotPrincipal': {'anyOf': [{'type': 'object'}, {'type': 'array'}]},
+                'Action': {'anyOf': [{'type': 'string'}, {'type': 'array'}]},
+                'NotAction': {'anyOf': [{'type': 'string'}, {'type': 'array'}]},
+                'Resource': {'anyOf': [{'type': 'string'}, {'type': 'array'}]},
+                'NotResource': {'anyOf': [{'type': 'string'}, {'type': 'array'}]},
+                'Condition': {'type': 'object'}
+            },
+            'required': ['Sid', 'Effect'],
+            'oneOf': [
+                {'required': ['Principal', 'Action', 'Resource']},
+                {'required': ['NotPrincipal', 'Action', 'Resource']},
+                {'required': ['Principal', 'NotAction', 'Resource']},
+                {'required': ['NotPrincipal', 'NotAction', 'Resource']},
+                {'required': ['Principal', 'Action', 'NotResource']},
+                {'required': ['NotPrincipal', 'Action', 'NotResource']},
+                {'required': ['Principal', 'NotAction', 'NotResource']},
+                {'required': ['NotPrincipal', 'NotAction', 'NotResource']}
+            ]
+        },
         'filters': {
             'value': ValueFilter.schema,
             'event': EventFilter.schema,
@@ -212,6 +240,7 @@ def generate(resource_types=()):
                 'memory': {'type': 'number'},
                 'timeout': {'type': 'number'},
                 'schedule': {'type': 'string'},
+                'function-prefix': {'type': 'string'},
                 'dead_letter_config': {'type': 'object'},
                 'environment': {'type': 'object'},
                 'kms_key_arn': {'type': 'string'},
@@ -220,6 +249,8 @@ def generate(resource_types=()):
                 'packages': {'type': 'array'},
                 'subnets': {'type': 'array'},
                 'security_groups': {'type': 'array'},
+                # specific to guard duty
+                'member-role': {'type': 'string'},
             },
         },
     }

@@ -479,7 +479,18 @@ def bucket_client(session, b, kms=False):
 def modify_bucket_tags(session_factory, buckets, add_tags=(), remove_tags=()):
     for bucket in buckets:
         client = bucket_client(local_session(session_factory), bucket)
-        # all the tag marshalling back and forth is a bit gross :-(
+        # Bucket tags are set atomically for the set/document, we want
+        # to refetch against current to guard against any staleness in
+        # our cached representation across multiple policies or concurrent
+        # modifications.
+        try:
+            bucket['Tags'] = client.get_bucket_tagging(
+                Bucket=bucket['Name']).get('TagSet', [])
+        except ClientError as e:
+            if e.response['Error']['Code'] != 'NoSuchTagSet':
+                raise
+            bucket['Tags'] = []
+
         new_tags = {t['Key']: t['Value'] for t in add_tags}
         for t in bucket.get('Tags', ()):
             if (t['Key'] not in new_tags and
@@ -487,6 +498,7 @@ def modify_bucket_tags(session_factory, buckets, add_tags=(), remove_tags=()):
                     t['Key'] not in remove_tags):
                 new_tags[t['Key']] = t['Value']
         tag_set = [{'Key': k, 'Value': v} for k, v in new_tags.items()]
+
         try:
             client.put_bucket_tagging(
                 Bucket=bucket['Name'], Tagging={'TagSet': tag_set})
@@ -698,7 +710,7 @@ class BucketActionBase(BaseAction):
 
 @filters.register('has-statement')
 class HasStatementFilter(Filter):
-    """Find buckets with set of named policy statements.
+    """Find buckets with set of policy statements.
 
     :example:
 
@@ -711,10 +723,46 @@ class HasStatementFilter(Filter):
                   - type: has-statement
                     statement_ids:
                       - RequiredEncryptedPutObject
+
+
+            policies:
+              - name: s3-public-policy
+                resource: s3
+                filters:
+                  - type: has-statement
+                    statements:
+                      - Effect: Allow
+                        Action: 's3:*'
+                        Principal: '*'
     """
     schema = type_schema(
         'has-statement',
-        statement_ids={'type': 'array', 'items': {'type': 'string'}})
+        statement_ids={'type': 'array', 'items': {'type': 'string'}},
+        statements={
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'Sid': {'type': 'string'},
+                    'Effect': {'type': 'string', 'enum': ['Allow', 'Deny']},
+                    'Principal': {'anyOf': [
+                        {'type': 'string'},
+                        {'type': 'object'}, {'type': 'array'}]},
+                    'NotPrincipal': {
+                        'anyOf': [{'type': 'object'}, {'type': 'array'}]},
+                    'Action': {
+                        'anyOf': [{'type': 'string'}, {'type': 'array'}]},
+                    'NotAction': {
+                        'anyOf': [{'type': 'string'}, {'type': 'array'}]},
+                    'Resource': {
+                        'anyOf': [{'type': 'string'}, {'type': 'array'}]},
+                    'NotResource': {
+                        'anyOf': [{'type': 'string'}, {'type': 'array'}]},
+                    'Condition': {'type': 'object'}
+                },
+                'required': ['Effect']
+            }
+        })
 
     def process(self, buckets, event=None):
         return list(filter(None, map(self.process_bucket, buckets)))
@@ -724,12 +772,26 @@ class HasStatementFilter(Filter):
         if p is None:
             return None
         p = json.loads(p)
+
         required = list(self.data.get('statement_ids', []))
         statements = p.get('Statement', [])
         for s in list(statements):
             if s.get('Sid') in required:
                 required.remove(s['Sid'])
-        if not required:
+
+        required_statements = list(self.data.get('statements', []))
+        for required_statement in required_statements:
+            for statement in statements:
+                found = 0
+                for key, value in required_statement.items():
+                    if key in statement and value == statement[key]:
+                        found += 1
+                if found and found == len(required_statement):
+                    required_statements.remove(required_statement)
+                    break
+
+        if (self.data.get('statement_ids', []) and not required) or \
+           (self.data.get('statements', []) and not required_statements):
             return b
         return None
 
@@ -1215,7 +1277,7 @@ class AttachLambdaEncrypt(BucketActionBase):
 
 
                 policies:
-                  - name: s3-logging-buckets
+                  - name: s3-attach-encryption-event
                     resource: s3
                     filters:
                       - type: missing-policy-statement
@@ -2749,8 +2811,14 @@ class BucketEncryption(KMSKeyResolverMixin, Filter):
 
         if crypto == 'AES256' and algo == 'AES256':
             return True
-        elif crypto == 'aws:kms' and algo == 'aws:kms' and rule.get('KMSMasterKeyID') == key:
-            return True
+        elif crypto == 'aws:kms' and algo == 'aws:kms':
+            if key:
+                if rule.get('KMSMasterKeyID') == key:
+                    return True
+                else:
+                    return False
+            else:
+                return True
 
 
 @actions.register('set-bucket-encryption')

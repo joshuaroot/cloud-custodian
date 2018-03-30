@@ -118,6 +118,7 @@ class ChildResourceQuery(ResourceQuery):
     """
 
     capture_parent_id = False
+    parent_key = 'c7n:parent-id'
 
     def __init__(self, session_factory, manager):
         self.session_factory = session_factory
@@ -132,7 +133,7 @@ class ChildResourceQuery(ResourceQuery):
         if extra_args:
             params.update(extra_args)
 
-        parent_type, parent_key = m.parent_spec
+        parent_type, parent_key, annotate_parent = m.parent_spec
         parents = self.manager.get_resource_manager(parent_type)
         parent_ids = [p[parents.resource_type.id] for p in parents.resources()]
 
@@ -151,6 +152,9 @@ class ChildResourceQuery(ResourceQuery):
             merged_params = dict(params, **{parent_key: parent_id})
             subset = self._invoke_client_enum(
                 client, enum_op, merged_params, path)
+            if annotate_parent:
+                for r in subset:
+                    r[self.parent_key] = parent_id
             if subset and self.capture_parent_id:
                 results.extend([(parent_id, s) for s in subset])
             elif subset:
@@ -178,9 +182,6 @@ class QueryMeta(type):
                 attrs['filter_registry'].register('metrics', MetricsFilter)
             # EC2 Service boilerplate ...
             if m.service == 'ec2':
-                # Generic ec2 retry
-                attrs['retry'] = staticmethod(get_retry((
-                    'RequestLimitExceeded', 'Client.RequestLimitExceeded')))
                 # Generic ec2 resource tag support
                 if getattr(m, 'taggable', True):
                     register_ec2_tags(
@@ -356,6 +357,14 @@ class QueryResourceManager(ResourceManager):
 
     _generate_arn = None
 
+    retry = staticmethod(
+        get_retry((
+            'ThrottlingException',
+            'RequestLimitExceeded',
+            'Throttled',
+            'ThorttlingException',
+            'Client.RequestLimitExceeded')))
+
     def __init__(self, data, options):
         super(QueryResourceManager, self).__init__(data, options)
         self.source = self.get_source(self.source_type)
@@ -386,9 +395,12 @@ class QueryResourceManager(ResourceManager):
         return perms
 
     def get_cache_key(self, query):
-        return {'region': self.config.region,
-                'resource': str(self.__class__.__name__),
-                'q': query}
+        return {
+            'account': self.account_id,
+            'region': self.config.region,
+            'resource': str(self.__class__.__name__),
+            'q': query
+        }
 
     def resources(self, query=None):
         key = self.get_cache_key(query)
@@ -408,15 +420,22 @@ class QueryResourceManager(ResourceManager):
         self._cache.save(key, resources)
         return self.filter_resources(resources)
 
-    def get_resources(self, ids, cache=True):
+    def _get_cached_resources(self, ids):
         key = self.get_cache_key(None)
-        if cache and self._cache.load():
+        if self._cache.load():
             resources = self._cache.get(key)
             if resources is not None:
                 self.log.debug("Using cached results for get_resources")
                 m = self.get_model()
                 id_set = set(ids)
                 return [r for r in resources if r[m.id] in id_set]
+        return None
+
+    def get_resources(self, ids, cache=True):
+        if cache:
+            resources = self._get_cached_resources(ids)
+            if resources is not None:
+                return resources
         try:
             resources = self.augment(self.source.get_resources(ids))
             return resources

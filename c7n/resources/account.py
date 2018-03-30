@@ -519,6 +519,8 @@ class RequestLimitIncrease(BaseAction):
         'EC2': 'amazon-elastic-compute-cloud-linux',
         'RDS': 'amazon-relational-database-service-aurora',
         'VPC': 'amazon-virtual-private-cloud',
+        'IAM': 'aws-identity-and-access-management',
+        'CloudFormation': 'aws-cloudformation',
     }
 
     def process(self, resources):
@@ -772,8 +774,8 @@ class EnableDataEvents(BaseAction):
     .. code-block:: yaml
 
             policies:
-              - name: s3-remove-owner-tag
-                resource: actions
+              - name: s3-enable-data-events-logging
+                resource: account
                 actions:
                  - type: enable-data-events
                    data-trail:
