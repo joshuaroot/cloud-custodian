@@ -51,3 +51,24 @@ class TestBatchComputeEnvironment(BaseTest):
             computeEnvironments=[resources[0]['computeEnvironmentName']]
         )['computeEnvironments']
         self.assertEqual(envs[0]['status'], 'DELETING')
+
+
+class TestBatchDefinition(BaseTest):
+
+    def test_definition_deregister(self):
+        session_factory = self.replay_flight_data(
+            'test_batch_definition_deregister')
+        p = self.load_policy({
+            'name': 'batch-definition',
+            'resource': 'batch-definition',
+            'filters': [{'jobDefinitionName': 'c7n'}],
+            'actions': [{'type': 'deregister'}]
+        }, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        client = session_factory(region='us-east-1').client('batch')
+        defs = client.describe_job_definitions(
+            jobDefinitionName=resources[0]['jobDefinitionName']
+        )['jobDefinitions']
+        self.assertEqual(defs[0]['status'], 'INACTIVE')
+

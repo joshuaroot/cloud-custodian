@@ -18,6 +18,8 @@ from c7n.query import QueryResourceManager
 from c7n.actions import BaseAction
 from c7n.utils import local_session, type_schema
 
+from botocore.exceptions import ClientError
+
 
 @resources.register('batch-compute')
 class ComputeEnvironment(QueryResourceManager):
@@ -152,3 +154,39 @@ class DeleteComputeEnvironment(BaseAction, StateTransitionFilter):
             'status', self.valid_origin_status)
         with self.executor_factory(max_workers=2) as w:
             list(w.map(self.delete_environment, resources))
+
+
+@JobDefinition.action_registry.register('deregister')
+class DefinitionDeregister(BaseAction):
+    """Deregisters a batch definition
+
+    :example:
+
+    .. code-block: yaml
+
+        policies:
+          - name: deregister-definition
+            resource: batch-definition
+            filters:
+              - containerProperties.image: amazonlinux 
+            actions:
+              - type: deregister
+    """
+    schema = type_schema('deregister')
+    permissions = ('batch:DeregisterJobDefinition',)
+
+    def process(self, resources):
+        c = local_session(self.manager.session_factory).client('batch')
+
+        for r in resources:
+            try:
+                c.deregister_job_definition(
+                    jobDefinition='%s:%s' % (r['jobDefinitionName'],
+                                             r['revision']))
+            except ClientError as e:
+                if e.response['Error']['Code'] in ('ClientException',
+                                                   'ServerException'):
+                    self.log.warning('Exception deregistering %s: \n%s' % (
+                        r['jobDefinitionName'], e))
+                    continue
+                raise
