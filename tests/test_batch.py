@@ -61,7 +61,9 @@ class TestBatchDefinition(BaseTest):
         p = self.load_policy({
             'name': 'batch-definition',
             'resource': 'batch-definition',
-            'filters': [{'jobDefinitionName': 'c7n'}],
+            'filters': [
+                {'jobDefinitionName': 'c7n'},
+                {'status': 'ACTIVE'}],
             'actions': [{'type': 'deregister'}]
         }, session_factory=session_factory)
         resources = p.run()

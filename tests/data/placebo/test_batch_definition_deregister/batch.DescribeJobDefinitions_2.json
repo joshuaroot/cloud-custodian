@@ -4,40 +4,42 @@
         "jobDefinitions": [
             {
                 "status": "INACTIVE", 
-                "jobDefinitionArn": "arn:aws:batch:us-east-1:644160558196:job-definition/c7n:1", 
+                "jobDefinitionArn": "arn:aws:batch:us-east-1:644160558196:job-definition/c7n:3", 
                 "parameters": {}, 
                 "retryStrategy": {
                     "attempts": 1
                 }, 
                 "containerProperties": {
                     "mountPoints": [], 
-                    "image": "capitalone/cloud-custodian", 
+                    "image": "amazonlinux", 
                     "environment": [], 
                     "vcpus": 2, 
                     "jobRoleArn": "arn:aws:iam::644160558196:role/ecsTaskExecutionRole", 
                     "volumes": [], 
                     "memory": 2000, 
                     "command": [
-                        "schema"
+                        "echo", 
+                        "hello", 
+                        "world"
                     ], 
                     "ulimits": []
                 }, 
                 "type": "container", 
                 "jobDefinitionName": "c7n", 
-                "revision": 1
+                "revision": 3
             }
         ], 
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "3dde629d-53cf-11e8-aa61-9de1c6bb24a7", 
+            "RequestId": "c12e83f3-5453-11e8-b640-539f3c936c17", 
             "HTTPHeaders": {
-                "x-amzn-requestid": "3dde629d-53cf-11e8-aa61-9de1c6bb24a7", 
-                "content-length": "912", 
-                "x-amz-apigw-id": "Go0CUFAHIAMFw4A=", 
-                "x-amzn-trace-id": "Root=1-5af366db-08b2570e9390c57b46631290", 
+                "x-amzn-requestid": "c12e83f3-5453-11e8-b640-539f3c936c17", 
+                "content-length": "1350", 
+                "x-amz-apigw-id": "Gq-_GGa1IAMFcXg=", 
+                "x-amzn-trace-id": "Root=1-5af4452d-00a6e20a5ae8d10828382e06", 
                 "connection": "keep-alive", 
-                "date": "Wed, 09 May 2018 21:23:39 GMT", 
+                "date": "Thu, 10 May 2018 13:12:13 GMT", 
                 "content-type": "application/json"
             }
         }

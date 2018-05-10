@@ -175,18 +175,23 @@ class DefinitionDeregister(BaseAction):
     schema = type_schema('deregister')
     permissions = ('batch:DeregisterJobDefinition',)
 
-    def process(self, resources):
-        c = local_session(self.manager.session_factory).client('batch')
-
-        for r in resources:
-            try:
-                c.deregister_job_definition(
-                    jobDefinition='%s:%s' % (r['jobDefinitionName'],
-                                             r['revision']))
-            except ClientError as e:
-                if e.response['Error']['Code'] in ('ClientException',
-                                                   'ServerException'):
-                    self.log.warning('Exception deregistering %s: \n%s' % (
-                        r['jobDefinitionName'], e))
-                    continue
+    def deregister_definition(self, r):
+        try:
+            self.client.deregister_job_definition(
+                jobDefinition='%s:%s' % (r['jobDefinitionName'],
+                                         r['revision']))
+        except ClientError as e:
+            if e.response['Error']['Code'] in ('ClientException',
+                                               'ServerException'):
+                self.log.warning('Exception deregistering %s: \n%s' % (
+                    r['jobDefinitionName'], e))
+            else:
                 raise
+
+    def process(self, resources):
+        self.client = local_session(
+            self.manager.session_factory).client('batch')
+        with self.executor_factory(max_workers=2) as w:
+            list(w.map(self.deregister_definition, resources))
+
+
