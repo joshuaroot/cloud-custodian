@@ -168,7 +168,7 @@ class DefinitionDeregister(BaseAction):
           - name: deregister-definition
             resource: batch-definition
             filters:
-              - containerProperties.image: amazonlinux 
+              - containerProperties.image: amazonlinux
             actions:
               - type: deregister
     """
