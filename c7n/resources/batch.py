@@ -193,5 +193,3 @@ class DefinitionDeregister(BaseAction):
             self.manager.session_factory).client('batch')
         with self.executor_factory(max_workers=2) as w:
             list(w.map(self.deregister_definition, resources))
-
-
