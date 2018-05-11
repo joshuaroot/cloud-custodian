@@ -307,7 +307,7 @@ class LogCrossAccountFilter(CrossAccountAccessFilter):
         return results
 
 
-@LogGroup.action_registry.register('encrypt')
+@LogGroup.action_registry.register('set-encryption')
 class EncryptLogGroup(BaseAction):
     """Encrypts a log group by using specified KMS key
 
@@ -322,15 +322,29 @@ class EncryptLogGroup(BaseAction):
               -
             actions:
               - type: encrypt
-                kmskeyid: kms-key-arn
+                kms_key_id: key-arn
     """
-    schema = type_schema('encrypt', kmskeyid={'type': 'string'})
+    schema = type_schema(
+        'set-encryption',
+        kms_key_id={'type': 'string'},
+        kms_key_alias={'type': 'string'})
     permissions = ('logs:AssociateKmsKey',)
 
     def validate(self):
-        self.key = self.data.get('kmskeyid')
-        if not self.key:
-            raise ValueError('Parameter kmskeyid required')
+        self.key_id = self.data.get('kms_key_id')
+        key_alias = self.data.get('kms_key_alias')
+        if not self.key_id and not key_alias:
+            raise ValueError('Parameter kms_key_id or kms_key_alias required')
+
+        if not self.key_id and key_alias:
+            if key_alias.split('/')[0] != 'alias':
+                key_alias = 'alias/%s' % key_alias
+            self.key_id = local_session(
+                self.manager.session_factory).client('kms').describe_key(
+                KeyId=key_alias)['KeyMetadata']['Arn']
+
+            if not self.key_id:
+                raise ValueError('Invalid KMS key id')
         return self
 
     def process(self, resources):
@@ -339,7 +353,7 @@ class EncryptLogGroup(BaseAction):
             try:
                 client.associate_kms_key(
                     logGroupName=r['logGroupName'],
-                    kmsKeyId=self.key)
+                    kmsKeyId=self.key_id)
             except ClientError as e:
                 if e.response['Error']['Code'] in (
                         'OperationAbortedException',

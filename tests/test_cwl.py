@@ -99,8 +99,8 @@ class LogGroupTest(BaseTest):
              'resource': 'log-group',
              'filters': [{'logGroupName': log_group}],
              'actions': [{
-                 'type': 'encrypt',
-                 'kmskeyid': 'arn:aws:kms:us-east-1:385131497716:key/ba9430d4-fa6b-4397-a55c-3ab2b2143f77'
+                 'type': 'set-encryption',
+                 'kms_key_alias': 'CWKey'
              }]}, session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)

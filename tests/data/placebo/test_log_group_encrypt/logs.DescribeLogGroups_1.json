@@ -4,10 +4,10 @@
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "acfbc31b-552d-11e8-8cd3-5f382051df2a", 
+            "RequestId": "4b0652cb-5545-11e8-9d52-11b00e2dff62", 
             "HTTPHeaders": {
-                "x-amzn-requestid": "acfbc31b-552d-11e8-8cd3-5f382051df2a", 
-                "date": "Fri, 11 May 2018 15:12:09 GMT", 
+                "x-amzn-requestid": "4b0652cb-5545-11e8-9d52-11b00e2dff62", 
+                "date": "Fri, 11 May 2018 18:01:13 GMT", 
                 "content-length": "185", 
                 "content-type": "application/x-amz-json-1.1"
             }
@@ -15,7 +15,7 @@
         "logGroups": [
             {
                 "arn": "arn:aws:logs:us-east-1:385131497716:log-group:c7n-encrypted:*", 
-                "creationTime": 1526051529330, 
+                "creationTime": 1526061670826, 
                 "metricFilterCount": 0, 
                 "logGroupName": "c7n-encrypted", 
                 "storedBytes": 0
