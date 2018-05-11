@@ -15,6 +15,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from concurrent.futures import as_completed
 from datetime import datetime, timedelta
+from botocore.exceptions import ClientError
 
 from c7n.actions import BaseAction
 from c7n.filters import Filter
@@ -304,3 +305,48 @@ class LogCrossAccountFilter(CrossAccountAccessFilter):
             if found:
                 results.append(r)
         return results
+
+
+@LogGroup.action_registry.register('encrypt')
+class EncryptLogGroup(BaseAction):
+    """Encrypts a log group by using specified KMS key
+
+    :example:
+
+    .. code-block: yaml
+
+        policies:
+          - name: encrypt-log-group
+            resource: log-group
+            filters:
+              -
+            actions:
+              - type: encrypt
+                kmskeyid: kms-key-arn
+    """
+    schema = type_schema('encrypt', kmskeyid={'type': 'string'})
+    permissions = ('logs:AssociateKmsKey',)
+
+    def validate(self):
+        self.key = self.data.get('kmskeyid')
+        if not self.key:
+            raise ValueError('Parameter kmskeyid required')
+        return self
+
+    def process(self, resources):
+        client = local_session(self.manager.session_factory).client('logs')
+        for r in resources:
+            try:
+                client.associate_kms_key(
+                    logGroupName=r['logGroupName'],
+                    kmsKeyId=self.key)
+            except ClientError as e:
+                if e.response['Error']['Code'] in (
+                        'OperationAbortedException',
+                        'ResourceNotFoundException',
+                        'ServiceUnavailableException'):
+                    self.log.warning(
+                        'Exception encrypting log-group %s: \n%s' % (
+                            r['logGroupName'], e))
+                    continue
+                raise

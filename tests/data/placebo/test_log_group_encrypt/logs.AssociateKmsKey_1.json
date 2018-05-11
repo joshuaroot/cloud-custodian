@@ -1,0 +1,16 @@
+{
+    "status_code": 200, 
+    "data": {
+        "ResponseMetadata": {
+            "RetryAttempts": 0, 
+            "HTTPStatusCode": 200, 
+            "RequestId": "ad40e28d-552d-11e8-8189-e9c19ead317e", 
+            "HTTPHeaders": {
+                "x-amzn-requestid": "ad40e28d-552d-11e8-8189-e9c19ead317e", 
+                "date": "Fri, 11 May 2018 15:12:10 GMT", 
+                "content-length": "0", 
+                "content-type": "application/x-amz-json-1.1"
+            }
+        }
+    }
+}

@@ -87,3 +87,26 @@ class LogGroupTest(BaseTest):
         self.assertEqual(
             client.describe_log_groups(
                 logGroupNamePrefix=log_group)['logGroups'], [])
+
+    def test_encrypt(self):
+        log_group = 'c7n-encrypted'
+        session_factory = self.replay_flight_data('test_log_group_encrypt')
+        client = session_factory(region='us-east-1').client('logs')
+        client.create_log_group(logGroupName=log_group)
+        self.addCleanup(client.delete_log_group, logGroupName=log_group)
+        p = self.load_policy(
+            {'name': 'encrypt-log-group',
+             'resource': 'log-group',
+             'filters': [{'logGroupName': log_group}],
+             'actions': [{
+                 'type': 'encrypt',
+                 'kmskeyid': 'arn:aws:kms:us-east-1:385131497716:key/ba9430d4-fa6b-4397-a55c-3ab2b2143f77'
+             }]}, session_factory=session_factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['logGroupName'], log_group)
+        results = client.describe_log_groups(
+            logGroupNamePrefix=log_group)['logGroups']
+        self.assertEqual(
+            results[0]['kmsKeyId'],
+            'arn:aws:kms:us-east-1:385131497716:key/ba9430d4-fa6b-4397-a55c-3ab2b2143f77')
