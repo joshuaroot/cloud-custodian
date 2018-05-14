@@ -4,7 +4,7 @@
         "jobDefinitions": [
             {
                 "status": "INACTIVE", 
-                "jobDefinitionArn": "arn:aws:batch:us-east-1:644160558196:job-definition/c7n:3", 
+                "jobDefinitionArn": "arn:aws:batch:us-east-1:644160558196:job-definition/c7n_batch:1", 
                 "parameters": {}, 
                 "retryStrategy": {
                     "attempts": 1
@@ -19,27 +19,27 @@
                     "memory": 2000, 
                     "command": [
                         "echo", 
-                        "hello", 
-                        "world"
+                        "test", 
+                        "message"
                     ], 
                     "ulimits": []
                 }, 
                 "type": "container", 
-                "jobDefinitionName": "c7n", 
-                "revision": 3
+                "jobDefinitionName": "c7n_batch", 
+                "revision": 1
             }
         ], 
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "c12e83f3-5453-11e8-b640-539f3c936c17", 
+            "RequestId": "9f5e2951-5792-11e8-90e2-457a1ec69e2a", 
             "HTTPHeaders": {
-                "x-amzn-requestid": "c12e83f3-5453-11e8-b640-539f3c936c17", 
-                "content-length": "1350", 
-                "x-amz-apigw-id": "Gq-_GGa1IAMFcXg=", 
-                "x-amzn-trace-id": "Root=1-5af4452d-00a6e20a5ae8d10828382e06", 
+                "x-amzn-requestid": "9f5e2951-5792-11e8-90e2-457a1ec69e2a", 
+                "content-length": "471", 
+                "x-amz-apigw-id": "G4mNtFQbIAMFZMQ=", 
+                "x-amzn-trace-id": "Root=1-5af9b724-be20e1d3ed66a0824e3390c9", 
                 "connection": "keep-alive", 
-                "date": "Thu, 10 May 2018 13:12:13 GMT", 
+                "date": "Mon, 14 May 2018 16:19:48 GMT", 
                 "content-type": "application/json"
             }
         }

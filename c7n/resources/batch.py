@@ -157,7 +157,7 @@ class DeleteComputeEnvironment(BaseAction, StateTransitionFilter):
 
 
 @JobDefinition.action_registry.register('deregister')
-class DefinitionDeregister(BaseAction):
+class DefinitionDeregister(BaseAction, StateTransitionFilter):
     """Deregisters a batch definition
 
     :example:
@@ -174,21 +174,16 @@ class DefinitionDeregister(BaseAction):
     """
     schema = type_schema('deregister')
     permissions = ('batch:DeregisterJobDefinition',)
+    valid_origin_states = ('ACTIVE',)
 
     def deregister_definition(self, r):
-        try:
-            self.client.deregister_job_definition(
-                jobDefinition='%s:%s' % (r['jobDefinitionName'],
-                                         r['revision']))
-        except ClientError as e:
-            if e.response['Error']['Code'] in ('ClientException',
-                                               'ServerException'):
-                self.log.warning('Exception deregistering %s: \n%s' % (
-                    r['jobDefinitionName'], e))
-            else:
-                raise
+        self.client.deregister_job_definition(
+            jobDefinition='%s:%s' % (r['jobDefinitionName'],
+                                     r['revision']))
 
     def process(self, resources):
+        resources = self.filter_resource_state(
+            resources, 'status', self.valid_origin_states)
         self.client = local_session(
             self.manager.session_factory).client('batch')
         with self.executor_factory(max_workers=2) as w:
