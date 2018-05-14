@@ -18,8 +18,6 @@ from c7n.query import QueryResourceManager
 from c7n.actions import BaseAction
 from c7n.utils import local_session, type_schema
 
-from botocore.exceptions import ClientError
-
 
 @resources.register('batch-compute')
 class ComputeEnvironment(QueryResourceManager):
