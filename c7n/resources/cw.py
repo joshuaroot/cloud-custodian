@@ -309,7 +309,7 @@ class LogCrossAccountFilter(CrossAccountAccessFilter):
 
 @LogGroup.action_registry.register('set-encryption')
 class EncryptLogGroup(BaseAction):
-    """Encrypts a log group by using specified KMS key
+    """Encrypt/Decrypt a log group
 
     :example:
 
@@ -319,41 +319,57 @@ class EncryptLogGroup(BaseAction):
           - name: encrypt-log-group
             resource: log-group
             filters:
-              -
+              - kmsKeyId: absent
             actions:
-              - type: encrypt
-                kms_key_id: key-arn
+              - type: set-encryption
+                kms_key_id: kms:key:arn
+                state: True
+
+          - name: decrypt-log-group
+            resource: log-group
+            filters:
+              - kmsKeyId: kms:key:arn
+            actions:
+              - type: set-encryption
+                state: False
     """
     schema = type_schema(
         'set-encryption',
         kms_key_id={'type': 'string'},
-        kms_key_alias={'type': 'string'})
-    permissions = ('logs:AssociateKmsKey',)
+        kms_key_alias={'type': 'string'},
+        state={'type': 'boolean'})
+    permissions = ('logs:AssociateKmsKey', 'logs:DisassociateKmsKey')
 
     def validate(self):
         self.key_id = self.data.get('kms_key_id')
         key_alias = self.data.get('kms_key_alias')
-        if not self.key_id and not key_alias:
-            raise ValueError('Parameter kms_key_id or kms_key_alias required')
 
-        if not self.key_id and key_alias:
-            if key_alias.split('/')[0] != 'alias':
-                key_alias = 'alias/%s' % key_alias
-            self.key_id = local_session(
-                self.manager.session_factory).client('kms').describe_key(
-                KeyId=key_alias)['KeyMetadata']['Arn']
+        if self.data.get('state', True):
+            if (not self.key_id and not key_alias) or \
+                    (self.key_id and key_alias):
+                raise ValueError('Must specify either a KMS key ARN or Alias')
 
-            if not self.key_id:
-                raise ValueError('Invalid KMS key id')
+            if not self.key_id and key_alias:
+                if key_alias.split('/')[0] != 'alias':
+                    key_alias = 'alias/%s' % key_alias
+                self.key_id = local_session(
+                    self.manager.session_factory).client('kms').describe_key(
+                    KeyId=key_alias)['KeyMetadata']['Arn']
+
+                if not self.key_id:
+                    raise ValueError('Invalid KMS key alias')
         return self
 
     def process(self, resources):
         client = local_session(self.manager.session_factory).client('logs')
+
         for r in resources:
             try:
-                client.associate_kms_key(
-                    logGroupName=r['logGroupName'],
-                    kmsKeyId=self.key_id)
+                if self.data.get('state', True):
+                    client.associate_kms_key(logGroupName=r['logGroupName'],
+                                             kmsKeyId=self.key_id)
+                else:
+                    client.disassociate_kms_key(logGroupName=r['logGroupName'])
             except ClientError as e:
                 if e.response['Error']['Code'] in (
                         'OperationAbortedException',
