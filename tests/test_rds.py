@@ -14,6 +14,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import datetime
+from dateutil import tz, zoneinfo
 import json
 import logging
 import os
@@ -24,7 +25,7 @@ from collections import OrderedDict
 
 from botocore.exceptions import ClientError
 import boto3
-from .common import BaseTest, event_data
+from .common import BaseTest, event_data, TestConfig as Config
 
 from c7n.executor import MainThreadExecutor
 from c7n.filters import FilterValidationError
@@ -131,6 +132,7 @@ class RDSTest(BaseTest):
             'resource': 'rds',
             'filters': [
                 {'tag:Platform': 'postgres'}]},
+            config=Config.empty(),
             session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
@@ -145,6 +147,7 @@ class RDSTest(BaseTest):
                 {'tag:Platform': 'postgres'}],
             'actions': [
                 {'type': 'tag-trim', 'preserve': ['Name', 'Owner']}]},
+            config=Config.empty(),
             session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
@@ -161,6 +164,7 @@ class RDSTest(BaseTest):
                 {'tag:Platform': 'postgres'}],
             'actions': [
                 {'type': 'tag', 'key': 'xyz', 'value': 'hello world'}]},
+            config=Config.empty(),
             session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
@@ -179,6 +183,7 @@ class RDSTest(BaseTest):
                 {'tag:xyz': 'not-null'}],
             'actions': [
                 {'type': 'remove-tag', 'tags': ['xyz']}]},
+            config=Config.empty(),
             session_factory=session_factory)
         resources = policy.run()
         self.assertEqual(len(resources), 1)
@@ -197,6 +202,7 @@ class RDSTest(BaseTest):
             'actions': [
                 {'type': 'mark-for-op', 'tag': 'custodian_next', 'days': 1,
                  'op': 'delete'}]},
+            config=Config.empty(),
             session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
@@ -207,9 +213,65 @@ class RDSTest(BaseTest):
             'filters': [
                 {'type': 'marked-for-op', 'tag': 'custodian_next',
                  'op': 'delete', 'skew': 1}]},
+            config=Config.empty(),
             session_factory=session_factory)
         resources = policy.run()
         self.assertEqual(len(resources), 1)
+
+    def test_rds_mark_hours(self):
+        localtz = zoneinfo.gettz('Etc/UTC')
+        dt = datetime.datetime.now(localtz)
+        dt = dt.replace(year=2018, month=5, day=9, hour=21, minute=20,
+                        second=0, microsecond=0)
+        session_factory = self.replay_flight_data('test_rds_mark_hours')
+        session = session_factory(region='us-east-1')
+        rds = session.client('rds')
+
+        policy = self.load_policy({
+            'name': 'rds-mark-5-hours',
+            'resource': 'rds',
+            'filters': [
+                {'tag:CreatorName': 'absent'}
+            ],
+            'actions': [
+                {'type': 'mark-for-op',
+                 'hours': 5,
+                 'op': 'delete'}]
+        },
+            config={'account_id': '123456789012'},
+            session_factory=session_factory
+        )
+        resources = policy.run()
+        self.assertEqual(len(resources), 1)
+
+        resource = rds.list_tags_for_resource(
+            ResourceName=resources[0]['DBInstanceArn']
+        )
+        tags = [
+            t['Value'] for t in resource['TagList']
+            if t['Key'] == 'maid_status'
+        ]
+        result = datetime.datetime.strptime(
+            tags[0].strip().split('@', 1)[-1], '%Y/%m/%d %H%M %Z'
+        ).replace(tzinfo=localtz)
+        self.assertEqual(result, dt)
+
+    def test_rds_marked_hours(self):
+        session_factory = self.replay_flight_data('test_rds_marked_hours')
+        policy = self.load_policy(
+            {'name': 'rds-marked-for-op-hours',
+             'resource': 'rds',
+             'filters': [
+                 {'type': 'marked-for-op',
+                  'op': 'delete'}
+             ]
+             },
+            config={'account_id': '123456789012'},
+            session_factory=session_factory
+        )
+        resources = policy.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(resources[0]['DBInstanceIdentifier'], 'db1')
 
     def test_rds_default_vpc(self):
         session_factory = self.replay_flight_data('test_rds_default_vpc')
@@ -305,7 +367,7 @@ class RDSTest(BaseTest):
             'actions': [
                 {'type': 'restore',
                  'restore_options': {'DBInstanceIdentifier': instance_id}}]
-                }, session_factory=session_factory)
+                }, Config.empty(region='us-east-2'), session_factory=session_factory)
         resources = p.run()
 
         self.assertEqual(len(resources), 1)
@@ -329,7 +391,7 @@ class RDSTest(BaseTest):
              'actions': [
                  {'type': 'delete',
                   'copy-restore-info': True}]},
-            config={'region': 'us-east-2'},
+            config=Config.empty(region="us-east-2"),
             session_factory=session_factory)
         resources = p.run()
         db_info = client.describe_db_instances(DBInstanceIdentifier=instance_id)
@@ -349,7 +411,7 @@ class RDSTest(BaseTest):
              'actions': [
                  {'type': 'delete',
                   'skip-snapshot': True}]},
-            config={'region': 'us-west-2'},
+             config=Config.empty(region="us-west-2"),
             session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
@@ -418,7 +480,9 @@ class RDSTest(BaseTest):
                   'op': 'upgrade', 'skew': 4}],
              'actions': [{
                  'type': 'upgrade',
-                 'immediate': False}]}, session_factory=session_factory)
+                 'immediate': False}]},
+             config=Config.empty(),
+             session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
         self.assertEqual(
@@ -744,7 +808,7 @@ class RDSSnapshotTest(BaseTest):
              'actions': [{
                  'type': 'region-copy',
                  'target_region': 'us-east-2'}]},
-            session_factory=factory)
+            Config.empty(region='us-east-2'), session_factory=factory)
         resources = p.run()
         self.assertFalse([r for r in resources if 'c7n:CopiedSnapshot' in r])
         self.assertIn('Source and destination region are the same',
@@ -777,7 +841,7 @@ class RDSSnapshotTest(BaseTest):
                  'tags': {'migrated_from': 'us-east-1'},
                  'target_key': 'cb291f53-f3ab-4e64-843e-47b0a7c9cf61'}
                 ]
-            }, session_factory=factory)
+            }, Config.empty(region='us-east-1'), session_factory=factory)
         resources = p.run()
         self.assertEqual(len(resources), 9)
         self.assertEqual(
@@ -801,7 +865,7 @@ class RDSSnapshotTest(BaseTest):
                  'tags': {'migrated_from': 'us-east-1'},
                  'target_key': 'cb291f53-f3ab-4e64-843e-47b0a7c9cf61'}
                 ]
-            }, session_factory=factory)
+            }, Config.empty(region='us-east-1'), session_factory=factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)
 
@@ -827,6 +891,7 @@ class RDSSnapshotTest(BaseTest):
             'resource': 'rds-snapshot',
             'filters': [{'type': 'marked-for-op',
                          'op': 'delete'}]},
+            config=Config.empty(),
             session_factory=factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)

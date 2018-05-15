@@ -1,4 +1,4 @@
-# Copyright 2015-2017 Capital One Services, LLC
+# Copyright 2015-2018 Capital One Services, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import boto3
 import io
 import json
 import logging
@@ -22,16 +21,17 @@ import shutil
 import tempfile
 import unittest
 import uuid
+from functools import partial
 
 import six
 import yaml
 
 from c7n import policy
-from c7n.filters import revisions
 from c7n.schema import generate, validate as schema_validate
 from c7n.ctx import ExecutionContext
 from c7n.resources import load_resources
 from c7n.utils import CONN_CACHE
+from c7n.config import Bag, Config
 
 from .zpill import PillTest
 
@@ -47,9 +47,18 @@ ACCOUNT_ID = '644160558196'
 C7N_VALIDATE = bool(os.environ.get('C7N_VALIDATE', ''))
 C7N_SCHEMA = generate()
 
-
 skip_if_not_validating = unittest.skipIf(
     not C7N_VALIDATE, reason='We are not validating schemas.')
+
+
+class TestConfig(Config):
+    config_args = {
+        "metrics_enabled": False,
+        "account_id": ACCOUNT_ID,
+        "output_dir": "s3://test-example/foo"
+    }
+
+    empty = staticmethod(partial(Config.empty, **config_args))
 
 # Set this so that if we run nose directly the tests will not fail
 if 'AWS_DEFAULT_REGION' not in os.environ:
@@ -117,15 +126,30 @@ class BaseTest(PillTest):
     def load_policy_set(self, data, config=None):
         filename = self.write_policy_file(data)
         if config:
+            config['account_id'] = ACCOUNT_ID
             e = Config.empty(**config)
         else:
-            e = Config.empty()
+            e = Config.empty(account_id=ACCOUNT_ID)
         return policy.load(e, filename)
 
     def patch(self, obj, attr, new):
         old = getattr(obj, attr, None)
         setattr(obj, attr, new)
         self.addCleanup(setattr, obj, attr, old)
+
+    def change_cwd(self, work_dir=None):
+        if work_dir is None:
+            work_dir = self.get_temp_dir()
+
+        cur_dir = os.path.abspath(os.getcwd())
+
+        def restore():
+            os.chdir(cur_dir)
+
+        self.addCleanup(restore)
+
+        os.chdir(work_dir)
+        return work_dir
 
     def change_environment(self, **kwargs):
         """Change the environment to the given set of variables.
@@ -289,38 +313,6 @@ def instance(state=None, file='ec2-instance.json', **kw):
     return load_data(file, state, **kw)
 
 
-class Bag(dict):
-
-    def __getattr__(self, k):
-        try:
-            return self[k]
-        except KeyError:
-            raise AttributeError(k)
-
-
-class Config(Bag):
-
-    @classmethod
-    def empty(cls, **kw):
-        region = os.environ.get('AWS_DEFAULT_REGION', "us-east-1")
-        d = {}
-        d.update({
-            'region': region,
-            'regions': [region],
-            'cache': '',
-            'profile': None,
-            'account_id': ACCOUNT_ID,
-            'assume_role': None,
-            'external_id': None,
-            'log_group': None,
-            'metrics_enabled': False,
-            'output_dir': 's3://test-example/foo',
-            'cache_period': 0,
-            'dryrun': False})
-        d.update(kw)
-        return cls(d)
-
-
 class Instance(Bag):
     pass
 
@@ -345,4 +337,4 @@ try:
     import pytest
     functional = pytest.mark.functional
 except ImportError:
-    functional = lambda func: func  # noop
+    functional = lambda func: func  # noqa E731

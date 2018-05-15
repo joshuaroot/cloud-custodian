@@ -734,11 +734,9 @@ class PutMetric(BaseAction):
             'key': {'type': 'string'},  # jmes path
             'namespace': {'type': 'string'},
             'metric_name': {'type': 'string'},
-            'dimensions':
-                {'type':'array',
-                'items': {
-                    'type':'object'
-                },
+            'dimensions': {
+                'type': 'array',
+                'items': {'type': 'object'},
             },
             'op': {'enum': list(METRIC_OPS.keys())},
             'units': {'enum': METRIC_UNITS}
@@ -867,8 +865,8 @@ class ModifyPolicyBase(BaseAction):
     def __init__(self, data=None, manager=None):
         if manager is not None:
             config_args = {
-                'account_id': getattr(manager.config, 'account_id', None),
-                'region': getattr(manager.config, 'region', None)
+                'account_id': manager.config.account_id,
+                'region': manager.config.region
             }
             self.data = utils.format_string_values(data, **config_args)
         else:

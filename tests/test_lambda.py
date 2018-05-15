@@ -16,7 +16,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 
 from botocore.exceptions import ClientError
-from .common import BaseTest, functional
+from .common import BaseTest, functional, TestConfig as Config
 from c7n.executor import MainThreadExecutor
 from c7n.resources.awslambda import AWSLambda, ReservedConcurrency
 from c7n.mu import PythonPackageArchive
@@ -111,6 +111,21 @@ class LambdaPermissionTest(BaseTest):
 
 
 class LambdaTest(BaseTest):
+
+    def test_lambda_config_source(self):
+        factory = self.replay_flight_data('test_aws_lambda_config_source')
+        p = self.load_policy({
+            'name': 'lambda-config',
+            'resource': 'lambda',
+            'source': 'config',
+            'filters': [{'FunctionName': 'omnissm-register'}]},
+            session_factory=factory)
+        resources = p.run()
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(
+            resources[0]['Tags'],
+            [{'Key': 'lambda:createdBy', 'Value': 'SAM'}])
+        self.assertTrue('c7n:Policy' in resources[0])
 
     def test_delete(self):
         factory = self.replay_flight_data('test_aws_lambda_delete')
@@ -274,6 +289,7 @@ class LambdaTagTest(BaseTest):
             'name': 'lambda-mark',
             'resource': 'lambda',
             'filters': [{"tag:Language": "Python"}]},
+            config=Config.empty(),
             session_factory=session_factory)
         resources = policy.run()
         self.assertEqual(len(resources), 1)
@@ -290,6 +306,7 @@ class LambdaTagTest(BaseTest):
             'actions': [{
                 'type': 'mark-for-op', 'op': 'delete',
                 'tag': 'custodian_next', 'days': 1}]},
+            config=Config.empty(),
             session_factory=session_factory)
         resources = policy.run()
         self.assertEqual(len(resources), 1)
@@ -303,6 +320,7 @@ class LambdaTagTest(BaseTest):
             'filters': [
                 {'type': 'marked-for-op', 'tag': 'custodian_next',
                  'op': 'delete'}]},
+            config=Config.empty(),
             session_factory=session_factory)
         resources = policy.run()
         self.assertEqual(len(resources), 1)

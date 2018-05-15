@@ -1,4 +1,4 @@
-# Copyright 2015-2017 Capital One Services, LLC
+# Copyright 2015-2018 Capital One Services, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ except ImportError:
         return None
 
 from c7n.commands import schema_completer
+from c7n.config import Config
 
 DEFAULT_REGION = 'us-east-1'
 
@@ -264,14 +265,6 @@ def setup_parser():
     schema.set_defaults(command="c7n.commands.schema_cmd")
     _schema_options(schema)
 
-    # access_desc = ("Show permissions needed to execute the policies")
-    # access = subs.add_parser(
-    #    'access', description=access_desc, help=access_desc)
-    # access.set_defaults(command='c7n.commands.access')
-    # _default_options(access)
-    # access.add_argument(
-    #    '-m', '--access', default=False, action='store_true')
-
     run_desc = "\n".join((
         "Execute the policies in a config file",
         "",
@@ -292,6 +285,10 @@ def setup_parser():
     run.set_defaults(command="c7n.commands.run")
     _default_options(run)
     _dryrun_option(run)
+    run.add_argument(
+        "--skip-validation",
+        action="store_true",
+        help="Skips validation of policies (assumes you've run the validate command seperately).")
     run.add_argument(
         "-m", "--metrics-enabled",
         default=False, action="store_true",
@@ -334,12 +331,17 @@ def main():
     parser = setup_parser()
     argcomplete.autocomplete(parser)
     options = parser.parse_args()
+    if options.subparser is None:
+        parser.print_help(file=sys.stderr)
+        return sys.exit(2)
 
     _setup_logger(options)
 
     # Support the deprecated -c option
     if getattr(options, 'config', None) is not None:
         options.configs.append(options.config)
+
+    config = Config.empty(**vars(options))
 
     try:
         command = options.command
@@ -352,7 +354,7 @@ def main():
         process_name = [os.path.basename(sys.argv[0])]
         process_name.extend(sys.argv[1:])
         setproctitle(' '.join(process_name))
-        command(options)
+        command(config)
     except Exception:
         if not options.debug:
             raise
