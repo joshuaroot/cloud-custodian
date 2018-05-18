@@ -4,10 +4,10 @@
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "91ec1ec5-5aae-11e8-93e0-d7caafdb4af5", 
+            "RequestId": "4f83035c-5ab0-11e8-afb5-e5b1ca6a6971", 
             "HTTPHeaders": {
-                "x-amzn-requestid": "91ec1ec5-5aae-11e8-93e0-d7caafdb4af5", 
-                "date": "Fri, 18 May 2018 15:17:24 GMT", 
+                "x-amzn-requestid": "4f83035c-5ab0-11e8-afb5-e5b1ca6a6971", 
+                "date": "Fri, 18 May 2018 15:29:52 GMT", 
                 "content-length": "274", 
                 "content-type": "application/x-amz-json-1.1"
             }
@@ -16,7 +16,7 @@
             {
                 "storedBytes": 0, 
                 "metricFilterCount": 0, 
-                "creationTime": 1526656643416, 
+                "creationTime": 1526657391796, 
                 "logGroupName": "c7n-encrypted", 
                 "kmsKeyId": "arn:aws:kms:us-east-1:385131497716:key/ba9430d4-fa6b-4397-a55c-3ab2b2143f77", 
                 "arn": "arn:aws:logs:us-east-1:385131497716:log-group:c7n-encrypted:*"
