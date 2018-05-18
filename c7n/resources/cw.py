@@ -342,26 +342,26 @@ class EncryptLogGroup(BaseAction):
 
     def validate(self):
         self.key_id = self.data.get('kms_key_id')
-        key_alias = self.data.get('kms_key_alias')
+        self.key_alias = self.data.get('kms_key_alias')
 
-        if self.data.get('state', True):
-            if (not self.key_id and not key_alias) or \
-                    (self.key_id and key_alias):
-                raise ValueError('Must specify either a KMS key ARN or Alias')
+        if not self.data.get('state', True):
+            return self
 
-            if not self.key_id and key_alias:
-                if key_alias.split('/')[0] != 'alias':
-                    key_alias = 'alias/%s' % key_alias
-                self.key_id = local_session(
-                    self.manager.session_factory).client('kms').describe_key(
-                    KeyId=key_alias)['KeyMetadata']['Arn']
-
-                if not self.key_id:
-                    raise ValueError('Invalid KMS key alias')
+        if (not self.key_id and not self.key_alias) or \
+                (self.key_id and self.key_alias):
+            raise ValueError('Must specify either a KMS key ARN or Alias')
         return self
 
     def process(self, resources):
         client = local_session(self.manager.session_factory).client('logs')
+
+        if self.key_alias:
+            # Get Key ARN
+            alias = 'alias/' + self.key_alias
+            self.key_id = local_session(self.manager.session_factory).client(
+                'kms').describe_key(KeyId=alias)['KeyMetadata']['Arn']
+            if not self.key_id:
+                raise ValueError('Invalid KMS key alias')
 
         for r in resources:
             try:
@@ -371,12 +371,6 @@ class EncryptLogGroup(BaseAction):
                 else:
                     client.disassociate_kms_key(logGroupName=r['logGroupName'])
             except ClientError as e:
-                if e.response['Error']['Code'] in (
-                        'OperationAbortedException',
-                        'ResourceNotFoundException',
-                        'ServiceUnavailableException'):
-                    self.log.warning(
-                        'Exception encrypting log-group %s: \n%s' % (
-                            r['logGroupName'], e))
+                if e.response['Error']['Code'] == 'ResourceNotFoundException':
                     continue
                 raise
