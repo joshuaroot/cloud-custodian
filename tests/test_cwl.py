@@ -106,7 +106,7 @@ class LogGroupTest(BaseTest):
              'filters': [{'logGroupName': log_group}],
              'actions': [{
                  'type': 'set-encryption',
-                 'kms_key_alias': 'CWKey'
+                 'kms_key': 'CWKey'
              }]}, session_factory=session_factory)
         resources = p.run()
         self.assertEqual(len(resources), 1)

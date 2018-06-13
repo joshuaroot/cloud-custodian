@@ -333,7 +333,7 @@ class EncryptLogGroup(BaseAction):
               - kmsKeyId: absent
             actions:
               - type: set-encryption
-                kms_key_id: kms:key:arn
+                kms_key: kms:key:arn
                 state: True
 
           - name: decrypt-log-group
@@ -346,39 +346,41 @@ class EncryptLogGroup(BaseAction):
     """
     schema = type_schema(
         'set-encryption',
-        kms_key_id={'type': 'string'},
-        kms_key_alias={'type': 'string'},
+        kms_key={'type': 'string'},
         state={'type': 'boolean'})
     permissions = ('logs:AssociateKmsKey', 'logs:DisassociateKmsKey')
 
     def validate(self):
-        self.key_id = self.data.get('kms_key_id')
-        self.key_alias = self.data.get('kms_key_alias')
+        self.key = self.data.get('kms_key')
 
         if not self.data.get('state', True):
             return self
 
-        if (not self.key_id and not self.key_alias) or \
-                (self.key_id and self.key_alias):
+        if not self.key:
             raise ValueError('Must specify either a KMS key ARN or Alias')
         return self
 
     def process(self, resources):
         client = local_session(self.manager.session_factory).client('logs')
 
-        if self.key_alias:
-            # Get Key ARN
-            alias = 'alias/' + self.key_alias
-            self.key_id = local_session(self.manager.session_factory).client(
-                'kms').describe_key(KeyId=alias)['KeyMetadata']['Arn']
-            if not self.key_id:
-                raise ValueError('Invalid KMS key alias')
+        if self.key:
+            if len(self.key.split(':')) != 6:
+                # provided key is not an ARN
+                if self.key.rsplit('/', 1)[0] != 'alias':
+                    self.key = 'alias/' + self.key
+
+                self.key = local_session(
+                    self.manager.session_factory).client('kms').describe_key(
+                    KeyId=self.key)['KeyMetadata']['Arn']
+
+                if not self.key:
+                    raise ValueError('Invalid KMS key alias')
 
         for r in resources:
             try:
                 if self.data.get('state', True):
                     client.associate_kms_key(logGroupName=r['logGroupName'],
-                                             kmsKeyId=self.key_id)
+                                             kmsKeyId=self.key)
                 else:
                     client.disassociate_kms_key(logGroupName=r['logGroupName'])
             except ClientError as e:
