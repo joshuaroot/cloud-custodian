@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from c7n_azure.resources.arm import ArmResourceManager
 from c7n_azure.provider import resources
-from c7n.filters.core import ValueFilter, type_schema
+from c7n_azure.resources.arm import ArmResourceManager
+
 from c7n.actions import BaseAction
+from c7n.filters.core import ValueFilter, type_schema
+from c7n.filters.related import RelatedResourceFilter
 
 
 @resources.register('vm')
@@ -48,6 +50,15 @@ class InstanceViewFilter(ValueFilter):
             i['instanceView'] = instance.serialize()
 
         return super(InstanceViewFilter, self).__call__(i['instanceView'])
+
+
+@VirtualMachine.filter_registry.register('network-interface')
+class NetworkInterfaceFilter(RelatedResourceFilter):
+
+    schema = type_schema('network-interface', rinherit=ValueFilter.schema)
+
+    RelatedResource = "c7n_azure.resources.network_interface.NetworkInterface"
+    RelatedIdsExpression = "properties.networkProfile.networkInterfaces[0].id"
 
 
 @VirtualMachine.action_registry.register('stop')
@@ -99,20 +110,3 @@ class VmRestartAction(BaseAction):
     def process(self, vms):
         for vm in vms:
             self.restart(vm['resourceGroup'], vm['name'])
-
-
-@VirtualMachine.action_registry.register('delete')
-class VmDeleteAction(BaseAction):
-
-    schema = type_schema('delete')
-
-    def __init__(self, data=None, manager=None, log_dir=None):
-        super(VmDeleteAction, self).__init__(data, manager, log_dir)
-        self.client = self.manager.get_client()
-
-    def delete(self, resource_group, vm_name):
-        self.client.virtual_machines.delete(resource_group, vm_name)
-
-    def process(self, vms):
-        for vm in vms:
-            self.delete(vm['resourceGroup'], vm['name'])
