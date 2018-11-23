@@ -130,7 +130,7 @@ class FilterRegistry(PluginRegistry):
                 return And(data, self, manager)
             elif op == 'not':
                 return Not(data, self, manager)
-            return ValueFilter(data, manager).validate()
+            return ValueFilter(data, manager)
         if isinstance(data, six.string_types):
             filter_type = data
             data = {'type': data}
@@ -161,6 +161,7 @@ class Filter(object):
     metrics = ()
     permissions = ()
     schema = {'type': 'object'}
+    schema_alias = None
 
     def __init__(self, data, manager=None):
         self.data = data
@@ -178,13 +179,21 @@ class Filter(object):
         return list(filter(self, resources))
 
 
-class Or(Filter):
+class BooleanGroupFilter(Filter):
 
     def __init__(self, data, registry, manager):
-        super(Or, self).__init__(data)
+        super(BooleanGroupFilter, self).__init__(data)
         self.registry = registry
         self.filters = registry.parse(list(self.data.values())[0], manager)
         self.manager = manager
+
+    def validate(self):
+        for f in self.filters:
+            f.validate()
+        return self
+
+
+class Or(BooleanGroupFilter):
 
     def process(self, resources, event=None):
         if self.manager:
@@ -208,13 +217,7 @@ class Or(Filter):
         return [resource_map[r_id] for r_id in results]
 
 
-class And(Filter):
-
-    def __init__(self, data, registry, manager):
-        super(And, self).__init__(data)
-        self.registry = registry
-        self.filters = registry.parse(list(self.data.values())[0], manager)
-        self.manager = manager
+class And(BooleanGroupFilter):
 
     def process(self, resources, events=None):
         if self.manager:
@@ -222,6 +225,8 @@ class And(Filter):
 
         for f in self.filters:
             resources = f.process(resources, events)
+            if not resources:
+                break
 
         if self.manager:
             sweeper.sweep(resources)
@@ -229,13 +234,7 @@ class And(Filter):
         return resources
 
 
-class Not(Filter):
-
-    def __init__(self, data, registry, manager):
-        super(Not, self).__init__(data)
-        self.registry = registry
-        self.filters = registry.parse(list(self.data.values())[0], manager)
-        self.manager = manager
+class Not(BooleanGroupFilter):
 
     def process(self, resources, event=None):
         if self.manager:
@@ -259,6 +258,8 @@ class Not(Filter):
 
         for f in self.filters:
             resources = f.process(resources, event)
+            if not resources:
+                break
 
         before = set(resource_map.keys())
         after = set([r[resource_type.id] for r in resources])
@@ -312,7 +313,8 @@ class ValueFilter(Filter):
             'key': {'type': 'string'},
             'value_type': {'enum': [
                 'age', 'integer', 'expiration', 'normalize', 'size',
-                'cidr', 'cidr_size', 'swap', 'resource_count', 'expr', 'unique_size']},
+                'cidr', 'cidr_size', 'swap', 'resource_count', 'expr',
+                'unique_size']},
             'default': {'type': 'object'},
             'value_from': ValuesFrom.schema,
             'value': {'oneOf': [
@@ -411,6 +413,11 @@ class ValueFilter(Filter):
                     if t.get('Key') == tk:
                         r = t.get('Value')
                         break
+            # GCP schema: 'labels': {'key': 'value'}
+            elif 'labels' in i:
+                r = i.get('labels', {}).get(tk, None)
+            # GCP has a secondary form of labels called tags
+            # as labels without values.
             # Azure schema: 'tags': {'key': 'value'}
             elif 'tags' in i:
                 r = i.get('tags', {}).get(tk, None)

@@ -14,11 +14,10 @@
 
 import sendgrid
 import six
+from c7n_mailer.utils import (get_message_subject, get_rendered_jinja)
+from c7n_mailer.utils_email import is_email
 from python_http_client import exceptions
 from sendgrid.helpers.mail import Email, Content, Mail
-
-from c7n_mailer.utils import (
-    get_message_subject, get_rendered_jinja)
 
 
 class SendGridDelivery(object):
@@ -26,13 +25,12 @@ class SendGridDelivery(object):
     def __init__(self, config, logger):
         self.config = config
         self.logger = logger
-        self.sendgrid_client = sendgrid.SendGridAPIClient(apikey=self.config['sendgrid_api_key'])
+        self.sendgrid_client = \
+            sendgrid.SendGridAPIClient(apikey=self.config.get('sendgrid_api_key', ''))
 
     def get_to_addrs_sendgrid_messages_map(self, queue_message):
-        targets = queue_message['action']['to']
-
         # eg: { ('milton@initech.com', 'peter@initech.com'): [resource1, resource2, etc] }
-        to_addrs_to_resources_map = {tuple(sorted(set(targets))): queue_message['resources']}
+        to_addrs_to_resources_map = self.get_email_to_addrs_to_resources_map(queue_message)
 
         to_addrs_to_content_map = {}
         for to_addrs, resources in six.iteritems(to_addrs_to_resources_map):
@@ -44,9 +42,40 @@ class SendGridDelivery(object):
         # eg: { ('milton@initech.com', 'peter@initech.com'): message }
         return to_addrs_to_content_map
 
+    # this function returns a dictionary with a tuple of emails as the key
+    # and the list of resources as the value. This helps ensure minimal emails
+    # are sent, while only ever sending emails to the respective parties.
+    def get_email_to_addrs_to_resources_map(self, queue_message):
+        email_to_addrs_to_resources_map = {}
+        targets = queue_message['action']['to']
+
+        for resource in queue_message['resources']:
+            # this is the list of emails that will be sent for this resource
+            resource_emails = []
+
+            for target in targets:
+                if target.startswith('tag:') and 'tags' in resource:
+                    tag_name = target.split(':', 1)[1]
+                    result = resource.get('tags', {}).get(tag_name, None)
+                    if is_email(result):
+                        resource_emails.append(result)
+                elif is_email(target):
+                    resource_emails.append(target)
+
+            resource_emails = tuple(sorted(set(resource_emails)))
+
+            if resource_emails:
+                email_to_addrs_to_resources_map.setdefault(resource_emails, []).append(resource)
+
+        if email_to_addrs_to_resources_map == {}:
+            self.logger.debug('Found no email addresses, sending no emails.')
+        # eg: { ('milton@initech.com', 'peter@initech.com'): [resource1, resource2, etc] }
+        return email_to_addrs_to_resources_map
+
     def get_message_content(self, queue_message, resources, to_addrs):
         return get_rendered_jinja(
-            to_addrs, queue_message, resources, self.logger, 'template', 'default')
+            to_addrs, queue_message, resources, self.logger,
+            'template', 'default', self.config['templates_folders'])
 
     def sendgrid_handler(self, queue_message, to_addrs_to_email_messages_map):
         self.logger.info("Sending account:%s policy:%s %s:%s email:%s to %s" % (
@@ -57,7 +86,7 @@ class SendGridDelivery(object):
             queue_message['action'].get('template', 'default'),
             to_addrs_to_email_messages_map))
 
-        from_email = Email(self.config['from_address'])
+        from_email = Email(self.config.get('from_address', ''))
         subject = get_message_subject(queue_message)
         email_format = queue_message['action'].get('template_format', None)
         if not email_format:

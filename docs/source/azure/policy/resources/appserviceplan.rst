@@ -11,9 +11,25 @@ Filters
     - Tag Filter - Filter on tag presence and/or values
     - Marked-For-Op Filter - Filter on tag that indicates a scheduled operation for a resource
 
+- ``onhour``
+
+  .. c7n-schema:: AzureOnHour
+       :module: c7n_azure.filters
+
+- ``offhour``
+
+  .. c7n-schema:: AzureOffHour
+       :module: c7n_azure.filters
+
 Actions
 -------
 - ARM Resource Actions (see :ref:`azure_genericarmaction`)
+
+- ``resize-plan``
+  Resize an app service plan by changing either the SKU or the number of instances.
+
+  .. c7n-schema:: ResizePlan
+       :module: c7n_azure.resources.appserviceplan
 
 Example Policies
 ----------------
@@ -25,7 +41,7 @@ and then perform the delete operation on those ready for deletion.
 
     policies:
       - name: mark-test-appservice-for-deletion
-        resource: azure.appservice
+        resource: azure.appserviceplan
         filters:
           - type: value
             key: name
@@ -37,7 +53,7 @@ and then perform the delete operation on those ready for deletion.
             op: delete
             days: 7
       - name: delete-test-appservice
-        resource: azure.appservice
+        resource: azure.appserviceplan
         filters:
           - type: marked-for-op
             op: delete
