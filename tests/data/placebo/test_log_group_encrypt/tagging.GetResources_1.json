@@ -1,18 +1,18 @@
 {
-    "status_code": 200, 
+    "status_code": 200,
     "data": {
-        "PaginationToken": "", 
-        "ResourceTagMappingList": [], 
+        "PaginationToken": "",
+        "ResourceTagMappingList": [],
         "ResponseMetadata": {
-            "RetryAttempts": 0, 
-            "HTTPStatusCode": 200, 
-            "RequestId": "4f27ea63-5ab0-11e8-8fb2-d17eb7125d70", 
+            "RequestId": "cde17355-efdf-11e8-a526-1525ebc53bdf",
+            "HTTPStatusCode": 200,
             "HTTPHeaders": {
-                "x-amzn-requestid": "4f27ea63-5ab0-11e8-8fb2-d17eb7125d70", 
-                "date": "Fri, 18 May 2018 15:29:51 GMT", 
-                "content-length": "50", 
-                "content-type": "application/x-amz-json-1.1"
-            }
+                "x-amzn-requestid": "cde17355-efdf-11e8-a526-1525ebc53bdf",
+                "content-type": "application/x-amz-json-1.1",
+                "content-length": "50",
+                "date": "Sat, 24 Nov 2018 11:55:14 GMT"
+            },
+            "RetryAttempts": 0
         }
     }
 }
