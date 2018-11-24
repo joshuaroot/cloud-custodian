@@ -99,7 +99,7 @@ class LogGroupTest(BaseTest):
     @functional
     def test_encrypt(self):
         log_group = 'c7n-encrypted'
-        session_factory = self.record_flight_data('test_log_group_encrypt')
+        session_factory = self.replay_flight_data('test_log_group_encrypt')
         client = session_factory(region='us-west-2').client('logs')
         client.create_log_group(logGroupName=log_group)
         self.addCleanup(client.delete_log_group, logGroupName=log_group)
