@@ -354,7 +354,8 @@ class EncryptLogGroup(BaseAction):
         'set-encryption',
         **{'kms-key': {'type': 'string'},
            'state': {'type': 'boolean'}})
-    permissions = ('logs:AssociateKmsKey', 'logs:DisassociateKmsKey')
+    permissions = (
+        'logs:AssociateKmsKey', 'logs:DisassociateKmsKey', 'kms:DescribeKey')
 
     def validate(self):
         if not self.data.get('state', True):
